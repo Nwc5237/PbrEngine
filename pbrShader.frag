@@ -6,6 +6,7 @@ out vec4 FragColor;
 in vec3 FragPos;
 in vec3 Normal;
 in vec2 TexCoords;
+in mat3 TBN;
 
 struct Light
 {
@@ -97,7 +98,8 @@ vec3 mapNormals()
 {
 	vec3 normal = texture(normalTex, TexCoords).rgb;
 	normal = normal * 2.0f - 1.0f;
-	return normal;
+
+	return normalize(TBN * normal);
 }
 
 void main()
@@ -106,7 +108,7 @@ void main()
 	vec3 l = normalize(lights[0].position - FragPos);
 	vec3 H = normalize(l + v);
 	float roughness = texture(roughnessTex, TexCoords).x;
-	float metalness = texture(metalnessTex, TexCoords).x;
+	float metalness = 1 - texture(metalnessTex, TexCoords).x;
 
 	vec3 N = normalize(Normal);
 
@@ -141,8 +143,19 @@ void main()
 
 	FragColor = vec4(Lo, 1.0f);
 
-	if(useTex)
+	//if(useTex)
 	{
+		
+		N = mapNormals();
+		//N = normalize(Normal);
+		
+		if(!useTex)
+		{
+			//roughness = .8;
+			//metalness = .04;
+			N = normalize(Normal);
+		}
+
 		D = DistributionGGX1(N, H, roughness);
 		f = FresnelSchlick1(max(dot(H, N), 0.0f), metalness);
 		G = 1.0f / pow(max(dot(l, H), .00001f), 2.0f);
@@ -151,6 +164,8 @@ void main()
 		spec = (D * G * F) / 4.0f;
 		Lo = (kD * vec3(texture(diffuseTex, TexCoords)) / pi + spec) * radiance * NdotL;
 		FragColor = vec4(Lo, 1.0f);
+
+		//FragColor = vec4(N, 1.0f);
 	}
 
 	//FragColor = vec4(texture(normalTex, TexCoords));
