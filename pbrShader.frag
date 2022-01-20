@@ -22,6 +22,7 @@ uniform sampler2D roughnessTex;
 uniform sampler2D metalnessTex;
 uniform bool useTex;
 
+//from learnopengl
 float DistributionGGX(vec3 N, vec3 H, float a)
 {
 	a = a * a; //adding because apparently roughness should be squared according to disney and epic
@@ -35,6 +36,7 @@ float DistributionGGX(vec3 N, vec3 H, float a)
 	return num / denom;
 }
 
+//from the epic games slides --- I prefer this one
 float DistributionGGX1(vec3 N, vec3 H, float a)
 {
 	a = a * a; //adding because apparently roughness should be squared according to disney and epic
@@ -74,10 +76,10 @@ float FresnelSchlick(float VdotH, float ior)
 	return F0 + (1.0 - F0) * pow(clamp(1.0 - VdotH, 0.0f, 1.0f), 5.0);
 }
 
+//the epic games version. Indistinguishable from regular schlick approx.
 float FresnelSchlick1(float VdotH, float ior)
 {
 	float F0 = pow((ior - 1) / (ior + 1), 2.0f);
-	//float F0 = .04;
 	return F0 + (1.0 - F0) * pow(2.0f, (-5.55473*VdotH-6.98316)*VdotH);
 }
 
@@ -94,7 +96,8 @@ float Radiance(vec3 surface, vec3 lightPos, vec3 N)
 	return attenuation * cosTheta;
 }
 
-vec3 mapNormals()
+//returns the normal for this fragment
+vec3 mapNormal()
 {
 	vec3 normal = texture(normalTex, TexCoords).rgb;
 	normal = normal * 2.0f - 1.0f;
@@ -104,69 +107,43 @@ vec3 mapNormals()
 
 void main()
 {
-	vec3 v = normalize(camPos - FragPos);
-	vec3 l = normalize(lights[0].position - FragPos);
-	vec3 H = normalize(l + v);
-	float roughness = texture(roughnessTex, TexCoords).x;
-	float metalness = 1 - texture(metalnessTex, TexCoords).x;
+	//lighting vectors: view is frag to camera, l is frag to light, H and N are regular halfway and normal
+	vec3 v, l, H, N;
 
-	vec3 N = normalize(Normal);
+	//pbr texture values
+	float roughness, metalness;
 
-	float fader = 250.0f;
-	float pi = 3.14159;
-	vec3 num;
-	float D, G, f, denom;
+	//misc
+	float fader=250f, pi=3.1415926, num, denom, NdotL;
+	vec3 F, Lo;
+
+	//D: microfacet roughness normal distribution, G: microfacet self shadowing, f: fresnel
+	float D, G, f;
+
+	//specular and diffuse ratio values, total specular, radiance
+	vec3 kS, kD, spec, radiance;
 	
+	v = normalize(camPos - FragPos);
+	l = normalize(lights[0].position - FragPos);
+	H = normalize(l + v);
+	N = mapNormal();
+	roughness = texture(roughnessTex, TexCoords).x;
+	metalness = 1 - texture(metalnessTex, TexCoords).x;
+
+	radiance = fader * lights[0].color * Attenuate(lights[0].position, FragPos);
 	
-	D = DistributionGGX(N, H, roughness);
-	G = GeometrySmith(N, v, l, roughness);
-
-	//confused here. learnopengl said use H (which seems to fix problem) but textbook uses view direction. Very strange 
-	f = FresnelSchlick(max(dot(H, N), 0.0f), metalness); //NO LONGER TRUE: dir and normal from textbook, learnopengl also uses halfway in place of dir and I think that's wrong
-
-
-	vec3 F = vec3(f);
-	num = D * G * F;
-	denom = 4.0f * max(dot(N, v), 0.0f) * max(dot(N, l), 0.0f) + .0001f; //adding teeny term at the end so we don't divide by zero
-	vec3 spec = num / denom;
-
-	vec3 kS, kD;
+		
+	D = DistributionGGX1(N, H, roughness);
+	G = 1.0f / pow(max(dot(l, H), .00001f), 2.0f);
+	f = FresnelSchlick1(max(dot(H, N), 0.0f), metalness);
+	
+	F = vec3(f);
 	kS = F;
 	kD = vec3(1.0f) - kS;
+	spec = (D * G * F) / 4.0f;
 
-	vec3 radiance = fader * lights[0].color * Attenuate(lights[0].position, FragPos);
-	float NdotL = max(dot(N, l), 0.0f);
-
-	vec3 Lo = (kD * vec3(texture(diffuseTex, TexCoords)) / pi + spec) * radiance * NdotL;
-	
-	//vec3 Lo = (kD * vec3(1.0f, 0.0f, .2f) / pi + spec) * radiance * NdotL;
-
+	NdotL = max(dot(N, l), 0.0f);
+	Lo = (kD * vec3(texture(diffuseTex, TexCoords)) / pi + spec) * radiance * NdotL;
+		
 	FragColor = vec4(Lo, 1.0f);
-
-	//if(useTex)
-	{
-		
-		N = mapNormals();
-		//N = normalize(Normal);
-		
-		if(!useTex)
-		{
-			//roughness = .8;
-			//metalness = .04;
-			N = normalize(Normal);
-		}
-
-		D = DistributionGGX1(N, H, roughness);
-		f = FresnelSchlick1(max(dot(H, N), 0.0f), metalness);
-		G = 1.0f / pow(max(dot(l, H), .00001f), 2.0f);
-		F = vec3(f);
-
-		spec = (D * G * F) / 4.0f;
-		Lo = (kD * vec3(texture(diffuseTex, TexCoords)) / pi + spec) * radiance * NdotL;
-		FragColor = vec4(Lo, 1.0f);
-
-		//FragColor = vec4(N, 1.0f);
-	}
-
-	//FragColor = vec4(texture(normalTex, TexCoords));
 }
