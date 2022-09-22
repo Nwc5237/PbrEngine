@@ -1,4 +1,6 @@
 #pragma once
+#include "EngineUtils.hpp"
+#include "Material.hpp"
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -16,9 +18,12 @@ typedef struct ObjVertex {
 
 class ObjModel {
 public:
+    char* path;
 
 	//constuctor
 	ObjModel(char *path) {
+        this->path = path;
+
         std::fstream newfile;
         int uv_index = 0;
 
@@ -40,12 +45,21 @@ public:
                     if (strncmp(line.c_str(), "f ", 2) == 0) {
                         pushFace(line);
                     }
+                    if (strncmp(line.c_str(), "mtllib", 6) == 0) {
+                        pushMaterial(line);
+                    }
                 }
             }
             newfile.close();
         }
 
-        setup();        
+        /* TODO: Add in those sweet sweet textures */
+        /*
+        Create a texture class
+        Later create a material class for embeding several textures 
+        */
+
+        setup();
 	}
 
     void setup() {
@@ -86,6 +100,12 @@ public:
     }
 
     void Draw(Shader shaderProgram) {
+        //might want to move the texture binding into the texture class
+        shaderProgram.use();
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, materials.at(0).diffuse.texID);
+        glUniform1i(glGetUniformLocation(shaderProgram.ID, "diffuseTex"), 0);
+
         glBindVertexArray(VAO);
         //shaderProgram.use();
         //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -99,7 +119,31 @@ private:
     std::vector<int> face_indices; //the indices for the buffer to render triangles
     std::vector<glm::vec3> pos_coords;
     std::vector<glm::vec2> tex_coords;
+    std::vector<Material> materials;
     unsigned int VAO, VBO, EBO;
+
+    void pushMaterial(std::string line) {
+        std::string directory, materialPath, filename;
+        int line_length = line.size();
+
+        filename = line.substr(7, line_length - 7);
+
+        directory = getDirectory(path);
+
+        if (isDoubleSlashPath(directory)) {
+            materialPath = directory + std::string("\\") + filename;
+        }
+        else {
+            materialPath = directory + std::string("/") + filename;
+        }
+
+        materials.push_back(Material(materialPath.c_str()));
+
+        /*
+        CURRENTLY getting material path, going to the material file with material name (different from the material path file name)
+        And then getting the diffuse texture
+        */
+    }
 
 
     //functions
@@ -206,16 +250,5 @@ private:
         result = std::stoi(str.substr(*pos, end - *pos));
         *pos = end + 1;
         return result;
-    }
-
-    bool in(char a, char* b) {
-        int i = 0;
-        char cur;
-        while ((cur = b[i]) != '\0') {
-            if (a == cur)
-                return true;
-            i++;
-        }
-        return false;
     }
 };

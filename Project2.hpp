@@ -20,16 +20,18 @@
 #include <heightmap.hpp>
 #include <track.hpp>
 #include <model.hpp>
+#include <ObjModel.hpp>
 
 // Basic C++ and C headers
 #include <iostream>
 #include <string>
 #include <limits>
 
-#include <math.h>      
+#include <math.h>
 
 
-# define M_PI           3.14159265358979323846  /* pi */
+
+# define M_PI           3.14159265358979323846 /* pi */
 
 // Reference: https://github.com/nothings/stb/blob/master/stb_image.h#L4
 // To use stb_image, add this in *one* C++ source file.
@@ -45,7 +47,7 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void processInput(GLFWwindow *window);
 unsigned int loadTexture(const char *path);
 unsigned int loadCubemap(std::vector<std::string> faces);
-void set_lighting(Shader shader, glm::vec3 * pointLightPositions);
+unsigned load_environment_map(const char *);
 
 
 // settings
