@@ -2,4 +2,7 @@
 Doing some physically based lighting in OpenGL
 
 TODO:
-Once textures and materials are working, add support for smooth shading (s 1 or s off) and maybe handle object groups differently inside files (o command).
+-Add support for smooth shading (s 1 or s off)
+-handle object groups (o command).
+-add warning for quad face triangles
+-check texture type (png has alpha channel so the stbi load is different)
