@@ -8,8 +8,14 @@
 #include <glm/glm.hpp>
 #include <stdio.h>
 
+typedef struct Mtl {
+    std::string name;
+    ObjTexture diffuse, normal, roughness, metalness;
+};
+
 class Material {
 public:
+    std::vector<Mtl> materials;
     ObjTexture diffuse;
     //on the line newmtl, read for this and add it as the material name
     Material(const char* path) {

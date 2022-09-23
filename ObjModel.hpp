@@ -102,7 +102,7 @@ public:
     void Draw(Shader shaderProgram) {
         //might want to move the texture binding into the texture class
         shaderProgram.use();
-        glActiveTexture(GL_TEXTURE1);
+        glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, materials.at(0).diffuse.texID);
         glUniform1i(glGetUniformLocation(shaderProgram.ID, "diffuseTex"), 0);
 
@@ -136,7 +136,6 @@ private:
         else {
             materialPath = directory + std::string("/") + filename;
         }
-
         materials.push_back(Material(materialPath.c_str()));
 
         /*
@@ -198,11 +197,6 @@ private:
         p3 = readInt(line, &pos)-1;
         t3 = readInt(line, &pos)-1;
         readInt(line, &pos); //skip normals
-
-        printf("indices: %d/%d/%d  vals: (%f, %f, %f) (%f, %f, %f) (%f, %f, %f)\n", p1, p2, p3,
-            pos_coords.at(p1).x, pos_coords.at(p1).y, pos_coords.at(p1).z, 
-            pos_coords.at(p2).x, pos_coords.at(p2).y, pos_coords.at(p2).z, 
-            pos_coords.at(p3).x, pos_coords.at(p3).y, pos_coords.at(p3).z);
 
         if (p1 < pos_coords.size() && t1 < tex_coords.size()) {
             vert.positition = pos_coords.at(p1);

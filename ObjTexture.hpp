@@ -10,6 +10,7 @@ public:
 		//do stb_image stuff here and texture binding
 		this->path = path;
 		unsigned char* data;
+		stbi_set_flip_vertically_on_load(true);
 		data = stbi_load(path, &width, &height, &nrChannels, 0);
 		
 		glGenTextures(1, &texID);
@@ -21,7 +22,7 @@ public:
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		
 		if (data) {
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_BYTE, data); //TODO check filetype. png is RGBA but jpeg is just rgb I believe
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data); //TODO check filetype. png is RGBA but jpeg is just rgb I believe
 			glGenerateMipmap(GL_TEXTURE_2D);
 		}
 		else {
