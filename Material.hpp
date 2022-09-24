@@ -16,8 +16,10 @@ typedef struct Mtl {
 class Material {
 public:
     std::vector<Mtl> materials;
-    ObjTexture diffuse;
     //on the line newmtl, read for this and add it as the material name
+
+    Material () {}
+
     Material(const char* path) {
         std::fstream newfile;
         int uv_index = 0;
@@ -25,11 +27,14 @@ public:
         newfile.open(path, std::ios::in);
         if (newfile.is_open()) {
             std::string line;
+
             while (getline(newfile, line)) {
+                if (line.find("newmtl") != std::string::npos) {
+                    materials.push_back(Mtl());
+                    materials.back().name = line.substr(7, line.size() - 7);
+                }
                 if (line.find("map_Kd ") != std::string::npos) {
-                    std::string a;
-                    a = getDiffuseTexturePath(line);
-                    this->diffuse = getTexture(getDiffuseTexturePath(line));
+                    materials.back().diffuse = getTexture(getDiffuseTexturePath(line));
                 }
             }
             newfile.close();
@@ -44,5 +49,14 @@ public:
 
     ObjTexture getTexture(std::string path) {
         return ObjTexture(path.c_str());
+    }
+
+    Mtl getMtl(std::string name) {
+        for (Mtl mat : materials) {
+            if (!name.compare(mat.name)) //comparison == 0
+                return mat;
+        }
+        printf("No matching material for: %s\n", name.c_str());
+        exit(0);
     }
 };

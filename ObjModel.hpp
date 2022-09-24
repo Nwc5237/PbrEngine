@@ -16,6 +16,12 @@ typedef struct ObjVertex {
     glm::vec3 bitangent;
 } ObjVertex;
 
+typedef struct ObjMesh {
+    std::string materialName;
+    std::vector<ObjVertex> vertices;
+    unsigned int VAO, VBO;
+} ObjMesh;
+
 class ObjModel {
 public:
     char* path;
@@ -46,7 +52,17 @@ public:
                         pushFace(line);
                     }
                     if (strncmp(line.c_str(), "mtllib", 6) == 0) {
-                        pushMaterial(line);
+                        createMaterial(line);
+                    }
+                    if (strncmp(line.c_str(), "usemtl", 6) == 0) {
+                        //when we hit a new material
+                        meshes.push_back(ObjMesh());
+                        meshes.back().materialName = line.substr(7, line.size() - 7);
+                        /*
+                        Want to keep drawing from pos and tex coords
+                        and make sure that the ObjVertex vector is
+                        correct so always use vector.back().vertices etc
+                        */
                     }
                 }
             }
@@ -63,66 +79,61 @@ public:
 	}
 
     void setup() {
-        glGenVertexArrays(1, &VAO);
-        glGenBuffers(1, &VBO);
-        glGenBuffers(1, &EBO);
 
-        glBindVertexArray(VAO);
+        for (ObjMesh &mesh : meshes) {
+            glGenVertexArrays(1, &mesh.VAO);
+            glGenBuffers(1, &mesh.VBO);
 
-        for (int i = 0; i < vertices.size(); i++) {
-            ObjVertex vert = vertices.at(i);
-            printf("(%f, %f, %f) (%f, %f)\n",  vert.positition.x, vert.positition.y, vert.positition.z, vert.texture.x, vert.texture.y);
+            glBindVertexArray(mesh.VAO);
+
+            glBindBuffer(GL_ARRAY_BUFFER, mesh.VBO);
+            glBufferData(GL_ARRAY_BUFFER, sizeof(ObjVertex) * mesh.vertices.size(), &mesh.vertices[0], GL_STATIC_DRAW);
+
+            glEnableVertexAttribArray(0);
+            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(ObjVertex), (void*)0);
+
+            glEnableVertexAttribArray(1);
+            glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(ObjVertex), (void*)offsetof(ObjVertex, texture));
+
+            glEnableVertexAttribArray(2);
+            glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(ObjVertex), (void*)offsetof(ObjVertex, normal));
+
+            glEnableVertexAttribArray(3);
+            glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(ObjVertex), (void*)offsetof(ObjVertex, tangent));
+
+            glEnableVertexAttribArray(4);
+            glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, sizeof(ObjVertex), (void*)offsetof(ObjVertex, bitangent));
+
+            glBindVertexArray(0);
         }
-
-        glBindBuffer(GL_ARRAY_BUFFER, VBO);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(ObjVertex) * vertices.size(), &vertices[0], GL_STATIC_DRAW);
-
-        //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-        //glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * face_indices.size(), &face_indices[0], GL_STATIC_DRAW);
-
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(ObjVertex), (void*)0);
-
-        glEnableVertexAttribArray(1);
-        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(ObjVertex), (void*)offsetof(ObjVertex, texture));
-
-        glEnableVertexAttribArray(2);
-        glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(ObjVertex), (void*)offsetof(ObjVertex, normal));
-
-        glEnableVertexAttribArray(3);
-        glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(ObjVertex), (void*)offsetof(ObjVertex, tangent));
-
-        glEnableVertexAttribArray(4);
-        glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, sizeof(ObjVertex), (void*)offsetof(ObjVertex, bitangent));
-
-        glBindVertexArray(0);
-
     }
 
     void Draw(Shader shaderProgram) {
         //might want to move the texture binding into the texture class
         shaderProgram.use();
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, materials.at(0).diffuse.texID);
-        glUniform1i(glGetUniformLocation(shaderProgram.ID, "diffuseTex"), 0);
+        for (ObjMesh &mesh : meshes) {
+            Mtl meshMaterial = modelMaterial.getMtl(mesh.materialName);
 
-        glBindVertexArray(VAO);
-        //shaderProgram.use();
-        //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-        glDrawArrays(GL_TRIANGLES, 0, vertices.size());
-        glBindVertexArray(0);
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, meshMaterial.diffuse.texID);
+            glUniform1i(glGetUniformLocation(shaderProgram.ID, "diffuseTex"), 0);
+
+            glBindVertexArray(mesh.VAO);
+            //shaderProgram.use();
+            //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+            glDrawArrays(GL_TRIANGLES, 0, mesh.vertices.size());
+            glBindVertexArray(0);
+        }
     }
 
 private:
     //variables
-    std::vector<ObjVertex> vertices; //the actual buffer we send to the GPU for rendering
-    std::vector<int> face_indices; //the indices for the buffer to render triangles
     std::vector<glm::vec3> pos_coords;
     std::vector<glm::vec2> tex_coords;
-    std::vector<Material> materials;
-    unsigned int VAO, VBO, EBO;
+    std::vector<ObjMesh> meshes;
+    Material modelMaterial;
 
-    void pushMaterial(std::string line) {
+    void createMaterial(std::string line) {
         std::string directory, materialPath, filename;
         int line_length = line.size();
 
@@ -136,7 +147,7 @@ private:
         else {
             materialPath = directory + std::string("/") + filename;
         }
-        materials.push_back(Material(materialPath.c_str()));
+        modelMaterial = Material(materialPath.c_str());
 
         /*
         CURRENTLY getting material path, going to the material file with material name (different from the material path file name)
@@ -201,7 +212,7 @@ private:
         if (p1 < pos_coords.size() && t1 < tex_coords.size()) {
             vert.positition = pos_coords.at(p1);
             vert.texture = tex_coords.at(t1);
-            vertices.push_back(vert);
+            meshes.back().vertices.push_back(vert);
         }
         else {
             printf("");
@@ -210,7 +221,7 @@ private:
         if (p2 < pos_coords.size() && t2 < tex_coords.size()) {
             vert.positition = pos_coords.at(p2);
             vert.texture = tex_coords.at(t2);
-            vertices.push_back(vert);
+            meshes.back().vertices.push_back(vert);
         }
         else {
             printf("");
@@ -219,7 +230,7 @@ private:
         if (p3 < pos_coords.size() && t3 < tex_coords.size()) {
             vert.positition = pos_coords.at(p3);
             vert.texture = tex_coords.at(t3);
-            vertices.push_back(vert);
+            meshes.back().vertices.push_back(vert);
         }
         else {
             printf("");
