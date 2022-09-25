@@ -38,3 +38,52 @@ bool isDoubleSlashPath(std::string path) {
     printf("No slashes found in path: %s\n", path.c_str());
     exit(0);
 }
+
+void readWhiteSpace(std::string str, int* pos) {
+    while (*pos < str.length() && in(str.at(*pos), " \n\t"))
+        (*pos)++;
+}
+
+int readInt(std::string str, int* pos) {
+    int start, end;
+
+    readWhiteSpace(str, pos);
+    start = *pos;
+    end = *pos;
+
+    if (str.at(end) == '-')
+        end++;
+
+    while (end < str.length() && in(str.at(end), "0123456789"))
+        end++;
+
+    *pos = end;
+    return std::stoi(str.substr(start, end - start));
+}
+
+float readFloat(std::string str, int* pos) {
+    int start, end;
+    
+    readWhiteSpace(str, pos);
+    start = *pos;
+    end = *pos;
+
+    if (str.at(end) == '-')
+        end++;
+
+    while (end < str.length() && in(str.at(end), "0123456789"))
+        end++;
+
+    if (str.at(end) == '.')
+        end++;
+    else
+        goto CREATE_FLOAT;
+
+    while (end < str.length() && in(str.at(end), "0123456789"))
+        end++;
+
+CREATE_FLOAT:
+    *pos = end;
+    return std::stof(str.substr(start, end - start));
+}
+

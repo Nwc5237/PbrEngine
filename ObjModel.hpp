@@ -31,7 +31,6 @@ public:
         this->path = path;
 
         std::fstream newfile;
-        int uv_index = 0;
 
         newfile.open(path, std::ios::in);
         if (newfile.is_open()) {
@@ -39,11 +38,10 @@ public:
             while (getline(newfile, line)) {
                 if (line.size() >= 2) {
                     if (strncmp(line.c_str(), "vn ", 3) == 0) {
-                        //pushNormal();
+                        pushNormal(line);
                     }
                     if (strncmp(line.c_str(), "vt ", 3) == 0) {
-                        pushTexCoord(line, uv_index);
-                        uv_index++;
+                        pushTexCoord(line);
                     }
                     if (strncmp(line.c_str(), "v ", 2) == 0) {
                         pushPositionCoord(line);
@@ -55,25 +53,14 @@ public:
                         createMaterial(line);
                     }
                     if (strncmp(line.c_str(), "usemtl", 6) == 0) {
-                        //when we hit a new material
+                        //when we hit a different material, we create a new mesh
                         meshes.push_back(ObjMesh());
                         meshes.back().materialName = line.substr(7, line.size() - 7);
-                        /*
-                        Want to keep drawing from pos and tex coords
-                        and make sure that the ObjVertex vector is
-                        correct so always use vector.back().vertices etc
-                        */
                     }
                 }
             }
             newfile.close();
         }
-
-        /* TODO: Add in those sweet sweet textures */
-        /*
-        Create a texture class
-        Later create a material class for embeding several textures 
-        */
 
         setup();
 	}
@@ -128,7 +115,7 @@ public:
 
 private:
     //variables
-    std::vector<glm::vec3> pos_coords;
+    std::vector<glm::vec3> pos_coords, norm_coords;
     std::vector<glm::vec2> tex_coords;
     std::vector<ObjMesh> meshes;
     Material modelMaterial;
@@ -148,18 +135,22 @@ private:
             materialPath = directory + std::string("/") + filename;
         }
         modelMaterial = Material(materialPath.c_str());
-
-        /*
-        CURRENTLY getting material path, going to the material file with material name (different from the material path file name)
-        And then getting the diffuse texture
-        */
     }
 
 
     //functions
-    void pushNormal(std::string line) { }
+    void pushNormal(std::string line) {
+        int pos = 3;
+        float x, y, z;
 
-    void pushTexCoord(std::string line, int uv_index) {
+        x = readFloat(line, &pos);
+        y = readFloat(line, &pos);
+        z = readFloat(line, &pos);
+
+        norm_coords.push_back(glm::vec3(x, y, z));
+    }
+
+    void pushTexCoord(std::string line) {
         int pos = 3;
         float u, v;
 
@@ -180,80 +171,63 @@ private:
         pos_coords.push_back(glm::vec3(x, y, z));
     }
 
-    float readFloat(std::string str, int *pos) {
-        int end, range;
-        float result;
-        bool neg;
-
-        end = *pos;
-        neg = str.at(*pos) == '-';
-        range = neg ? 9 : 8; //how many characters comprise the float, one extra ('-') if negative
-        
-        result = std::stof(str.substr(*pos, range));
-        *pos = *pos + range + 1; //move past the space
-        return result;   
-    }
-
     void pushFace(std::string line) {
-        int pos = 0;
+        int pos = 2; //past the 'f' command character and the space after
         ObjVertex vert;
 
-        int p1, t1, p2, t2, p3, t3;
+
+        /*To really make this robust, we need to make this count how many componenet and groups there are. (also, should be optional, so require
+        a read of '/' to move to the next one.)*/
+        int p1, t1, n1, p2, t2, n2, p3, t3, n3;
         p1 = readInt(line, &pos)-1;
+        pos++; //past the slash
         t1 = readInt(line, &pos)-1;
-        readInt(line, &pos); //skip normals
+        pos++; //past the slash again
+        n1 = readInt(line, &pos)-1;
+
         p2 = readInt(line, &pos)-1;
+        pos++; //past the slash
         t2 = readInt(line, &pos)-1;
-        readInt(line, &pos); //skip normals
+        pos++; //past the slash
+        n2 = readInt(line, &pos)-1;
+
         p3 = readInt(line, &pos)-1;
+        pos++; //past the slash
         t3 = readInt(line, &pos)-1;
-        readInt(line, &pos); //skip normals
+        pos++; //past the slash
+        n3 = readInt(line, &pos)-1;
 
-        if (p1 < pos_coords.size() && t1 < tex_coords.size()) {
-            vert.positition = pos_coords.at(p1);
-            vert.texture = tex_coords.at(t1);
+        if (p1 < pos_coords.size() && t1 < tex_coords.size() && n1 < norm_coords.size()) {
+            vert.positition =  pos_coords.at(p1);
+            vert.texture    =  tex_coords.at(t1);
+            vert.normal     = norm_coords.at(n1);
             meshes.back().vertices.push_back(vert);
         }
-        else {
-            printf("");
-        }
+        else
+            goto COORD_ERROR; //literally do not care about using gotos. They're great.
 
-        if (p2 < pos_coords.size() && t2 < tex_coords.size()) {
-            vert.positition = pos_coords.at(p2);
-            vert.texture = tex_coords.at(t2);
+        if (p2 < pos_coords.size() && t2 < tex_coords.size() && n2 < norm_coords.size()) {
+            vert.positition =  pos_coords.at(p2);
+            vert.texture    =  tex_coords.at(t2);
+            vert.normal     = norm_coords.at(n2);
             meshes.back().vertices.push_back(vert);
         }
-        else {
-            printf("");
-        }
+        else
+            goto COORD_ERROR;
 
-        if (p3 < pos_coords.size() && t3 < tex_coords.size()) {
-            vert.positition = pos_coords.at(p3);
-            vert.texture = tex_coords.at(t3);
+        if (p3 < pos_coords.size() && t3 < tex_coords.size() && n3 < norm_coords.size()) {
+            vert.positition =  pos_coords.at(p3);
+            vert.texture    =  tex_coords.at(t3);
+            vert.normal     = norm_coords.at(n3);
             meshes.back().vertices.push_back(vert);
         }
-        else {
-            printf("");
-        }
-    }
+        else
+            goto COORD_ERROR;
 
-    int readInt(std::string str, int* pos) {
-        int start = *pos, end, result;
-        
-        //increment the position past all non int characters
-        while (!in(str.at(*pos), "0123456789" )) {
-            (*pos)++;
-        }
+        return;
 
-        end = *pos;
-
-        //read all the int characters
-        do {
-            end++;
-        } while (end < str.length() && in(str.at(end), "0123456789"));
-
-        result = std::stoi(str.substr(*pos, end - *pos));
-        *pos = end + 1;
-        return result;
+    COORD_ERROR:
+        printf("Coordinate error in ObjModel.hpp::pushFace. Set breakpoints on the goto statements there to find where its coming from\n");
+        exit(0);
     }
 };

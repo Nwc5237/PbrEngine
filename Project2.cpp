@@ -5,6 +5,7 @@
 #include <fileapi.h>
 #include <ddraw.h>
 #include "EngineUtils.hpp"
+#include "JsonParser.hpp"
 
 
 #define GLM_ENABLE_EXPERIMENTAL
@@ -77,8 +78,13 @@ int main()
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	//ObjModel obj_model = ObjModel("C:/Users/ncala/Downloads/test_obj_file.obj");
-	ObjModel obj_model = ObjModel("C:/Users/ncala/Downloads/test_two_mesh_object.obj");
+	std::string json("{\"ColumbiaBldgSet_Tunnel\": [{\"location\": [4.42001485824585, 363.9205322265625, -58.55177688598633], \"rotation\": [0.0, -0.0, 0.0], \"scale\": [1.9501981735229492, 1.9501981735229492, 1.9501981735229492]}]}");
+	JsonParser p;
+	p.lexFile(json);
+	std::vector<JsonSceneComponent> components = p.parseJson();
+
+	ObjModel obj_model = ObjModel("C:/Users/ncala/Downloads/test_obj_file.obj");
+	//ObjModel obj_model = ObjModel("C:/Users/ncala/Downloads/test_two_mesh_object.obj");
 	//ObjModel obj_model = ObjModel("C:/Users/ncala/Downloads/enterprise.obj");
 
 
@@ -577,4 +583,3 @@ unsigned int loadCubemap(std::vector<std::string> faces)
 
 	return textureID;
 }
-
