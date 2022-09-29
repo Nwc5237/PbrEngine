@@ -95,13 +95,22 @@ public:
 				while (in(cur, "0123456789"))
 					cur = raw_json.at(forward++);
 
+				if(cur == 'e')
+					cur = raw_json.at(forward++);
+
+				if (cur == '-' || cur == '+')
+					cur = raw_json.at(forward++);
+
+				while (in(cur, "0123456789"))
+					cur = raw_json.at(forward++);
+
 				forward--;
 
 				lexemes.push_back(JsonLexeme{ J_FLOAT, raw_json.substr(pos, forward - pos) });
 				pos = forward;
 			}
 			else {
-				printf("error on this character: %c\n", cur);
+				printf("error on this character: %c at this position: %d\n", cur, pos);
 				exit(0);
 			}
 		}

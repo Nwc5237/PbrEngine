@@ -24,10 +24,10 @@ typedef struct ObjMesh {
 
 class ObjModel {
 public:
-    char* path;
+    const char* path;
 
 	//constuctor
-	ObjModel(char *path) {
+	ObjModel(const char *path) {
         this->path = path;
 
         std::fstream newfile;
@@ -104,6 +104,18 @@ public:
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, meshMaterial.diffuse.texID);
             glUniform1i(glGetUniformLocation(shaderProgram.ID, "diffuseTex"), 0);
+
+            glActiveTexture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_2D, meshMaterial.normal.texID);
+            glUniform1i(glGetUniformLocation(shaderProgram.ID, "normalTex"), 1);
+
+            glActiveTexture(GL_TEXTURE2);
+            glBindTexture(GL_TEXTURE_2D, meshMaterial.roughness.texID);
+            glUniform1i(glGetUniformLocation(shaderProgram.ID, "roughnessTex"), 2);
+
+            glActiveTexture(GL_TEXTURE3);
+            glBindTexture(GL_TEXTURE_2D, meshMaterial.metalness.texID);
+            glUniform1i(glGetUniformLocation(shaderProgram.ID, "metalnessTex"), 3);
 
             glBindVertexArray(mesh.VAO);
             //shaderProgram.use();
@@ -197,37 +209,86 @@ private:
         pos++; //past the slash
         n3 = readInt(line, &pos)-1;
 
-        if (p1 < pos_coords.size() && t1 < tex_coords.size() && n1 < norm_coords.size()) {
-            vert.positition =  pos_coords.at(p1);
-            vert.texture    =  tex_coords.at(t1);
-            vert.normal     = norm_coords.at(n1);
+
+        
+
+        glm::vec3 pos1, pos2, pos3,
+            norm1, norm2, norm3,
+            tan, bitan;
+
+        glm::vec2 tex1, tex2, tex3;
+
+        //if (p1 < pos_coords.size() && t1 < tex_coords.size() && n1 < norm_coords.size()) {
+            pos1    =  pos_coords.at(p1);
+            tex1    =  tex_coords.at(t1);
+            norm1   = norm_coords.at(n1);
+            //meshes.back().vertices.push_back(vert);
+        //}
+        //else
+          //  goto COORD_ERROR; //literally do not care about using gotos. They're great.
+
+        //if (p2 < pos_coords.size() && t2 < tex_coords.size() && n2 < norm_coords.size()) {
+            pos2 = pos_coords.at(p2);
+            tex2 = tex_coords.at(t2);
+            norm2 = norm_coords.at(n2);
+            //meshes.back().vertices.push_back(vert);
+        //}
+        //else
+          //  goto COORD_ERROR;
+
+        //if (p3 < pos_coords.size() && t3 < tex_coords.size() && n3 < norm_coords.size()) {
+            pos3 = pos_coords.at(p3);
+            tex3 = tex_coords.at(t3);
+            norm3 = norm_coords.at(n3);
+            //meshes.back().vertices.push_back(vert);
+        //}
+        //else
+          //  goto COORD_ERROR;
+
+        //return;
+
+            glm::vec3 edge1 = pos2 - pos1;
+            glm::vec3 edge2 = pos3 - pos1;
+            glm::vec2 deltaUV1 = tex2 - tex1;
+            glm::vec2 deltaUV2 = tex3 - tex1;
+
+            float f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
+
+            tan.x = f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
+            tan.y = f * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);
+            tan.z = f * (deltaUV2.y * edge1.z - deltaUV1.y * edge2.z);
+
+            bitan.x = f * (-deltaUV2.x * edge1.x + deltaUV1.x * edge2.x);
+            bitan.y = f * (-deltaUV2.x * edge1.y + deltaUV1.x * edge2.y);
+            bitan.z = f * (-deltaUV2.x * edge1.z + deltaUV1.x * edge2.z);
+
+            
+            vert.positition = pos1;
+            vert.texture = tex1;
+            vert.normal = norm1;
+            vert.tangent = tan;
+            vert.bitangent = bitan;
+
             meshes.back().vertices.push_back(vert);
-        }
-        else
-            goto COORD_ERROR; //literally do not care about using gotos. They're great.
 
-        if (p2 < pos_coords.size() && t2 < tex_coords.size() && n2 < norm_coords.size()) {
-            vert.positition =  pos_coords.at(p2);
-            vert.texture    =  tex_coords.at(t2);
-            vert.normal     = norm_coords.at(n2);
+            vert.positition = pos2;
+            vert.texture = tex2;
+            vert.normal = norm2;
+            vert.tangent = tan;
+            vert.bitangent = bitan;
+
             meshes.back().vertices.push_back(vert);
-        }
-        else
-            goto COORD_ERROR;
 
-        if (p3 < pos_coords.size() && t3 < tex_coords.size() && n3 < norm_coords.size()) {
-            vert.positition =  pos_coords.at(p3);
-            vert.texture    =  tex_coords.at(t3);
-            vert.normal     = norm_coords.at(n3);
+            vert.positition = pos3;
+            vert.texture = tex3;
+            vert.normal = norm3;
+            vert.tangent = tan;
+            vert.bitangent = bitan;
+
             meshes.back().vertices.push_back(vert);
-        }
-        else
-            goto COORD_ERROR;
 
-        return;
-
-    COORD_ERROR:
-        printf("Coordinate error in ObjModel.hpp::pushFace. Set breakpoints on the goto statements there to find where its coming from\n");
-        exit(0);
+    //COORD_ERROR:
+      //  printf("Coordinate error in ObjModel.hpp::pushFace. Set breakpoints on the goto statements there to find where its coming from\n");
+      //  exit(0);
     }
 };

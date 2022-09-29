@@ -36,6 +36,9 @@ public:
                 if (line.find("map_Kd ") != std::string::npos) {
                     materials.back().diffuse = getTexture(getDiffuseTexturePath(line));
                 }
+                if (line.find("map_Bump ") != std::string::npos) {
+                    materials.back().normal = getTexture(getNormalTexturePath(line));
+                }
             }
             newfile.close();
         }
@@ -43,8 +46,16 @@ public:
 
     std::string getDiffuseTexturePath(std::string line) {
         std::string a;
-        a = line.substr(7, line.size() - 7);
-        return line.substr(7, line.size()-7);
+        int offset = 7;
+        a = line.substr(offset, line.size() - offset);
+        return line.substr(offset, line.size() - offset);
+    }
+
+    std::string getNormalTexturePath(std::string line) {
+        std::string a;
+        int offset = 9;
+        a = line.substr(offset, line.size() - offset);
+        return line.substr(offset, line.size() - offset);
     }
 
     ObjTexture getTexture(std::string path) {
