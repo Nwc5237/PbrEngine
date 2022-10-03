@@ -218,34 +218,17 @@ private:
 
         glm::vec2 tex1, tex2, tex3;
 
-        //if (p1 < pos_coords.size() && t1 < tex_coords.size() && n1 < norm_coords.size()) {
             pos1    =  pos_coords.at(p1);
             tex1    =  tex_coords.at(t1);
             norm1   = norm_coords.at(n1);
-            //meshes.back().vertices.push_back(vert);
-        //}
-        //else
-          //  goto COORD_ERROR; //literally do not care about using gotos. They're great.
+            pos2    = pos_coords.at(p2);
+            tex2    = tex_coords.at(t2);
+            norm2   = norm_coords.at(n2);
+            pos3    = pos_coords.at(p3);
+            tex3    = tex_coords.at(t3);
+            norm3   = norm_coords.at(n3);
 
-        //if (p2 < pos_coords.size() && t2 < tex_coords.size() && n2 < norm_coords.size()) {
-            pos2 = pos_coords.at(p2);
-            tex2 = tex_coords.at(t2);
-            norm2 = norm_coords.at(n2);
-            //meshes.back().vertices.push_back(vert);
-        //}
-        //else
-          //  goto COORD_ERROR;
-
-        //if (p3 < pos_coords.size() && t3 < tex_coords.size() && n3 < norm_coords.size()) {
-            pos3 = pos_coords.at(p3);
-            tex3 = tex_coords.at(t3);
-            norm3 = norm_coords.at(n3);
-            //meshes.back().vertices.push_back(vert);
-        //}
-        //else
-          //  goto COORD_ERROR;
-
-        //return;
+            /*Might want to calculate normals as well based on that comment about blender exporting obj normals incorrectly*/
 
             glm::vec3 edge1 = pos2 - pos1;
             glm::vec3 edge2 = pos3 - pos1;
@@ -286,9 +269,5 @@ private:
             vert.bitangent = bitan;
 
             meshes.back().vertices.push_back(vert);
-
-    //COORD_ERROR:
-      //  printf("Coordinate error in ObjModel.hpp::pushFace. Set breakpoints on the goto statements there to find where its coming from\n");
-      //  exit(0);
     }
 };

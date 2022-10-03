@@ -16,11 +16,12 @@ typedef struct Mtl {
 class Material {
 public:
     std::vector<Mtl> materials;
-    //on the line newmtl, read for this and add it as the material name
+    std::string path;
 
     Material () {}
 
     Material(const char* path) {
+        this->path = std::string(path);
         std::fstream newfile;
         int uv_index = 0;
 
@@ -34,28 +35,36 @@ public:
                     materials.back().name = line.substr(7, line.size() - 7);
                 }
                 if (line.find("map_Kd ") != std::string::npos) {
-                    materials.back().diffuse = getTexture(getDiffuseTexturePath(line));
+                    materials.back().diffuse = getTexture(getTexturePath(line, 7));
                 }
                 if (line.find("map_Bump ") != std::string::npos) {
-                    materials.back().normal = getTexture(getNormalTexturePath(line));
+                    materials.back().normal = getTexture(getTexturePath(line, 9));
+                }
+                if (line.find("map_Ns ") != std::string::npos) {
+                    materials.back().roughness = getTexture(getTexturePath(line, 7));
+                }
+                if (line.find("refl ") != std::string::npos) {
+                    materials.back().metalness = getTexture(getTexturePath(line, 5));
                 }
             }
             newfile.close();
         }
     }
 
-    std::string getDiffuseTexturePath(std::string line) {
-        std::string a;
-        int offset = 7;
-        a = line.substr(offset, line.size() - offset);
-        return line.substr(offset, line.size() - offset);
-    }
+    /*get texture path - If we recognize that it has the full path, use it, otherwise do the appending stuff*/
+    std::string getTexturePath(std::string line, int offset) {
+        std::string file_name, directory;
 
-    std::string getNormalTexturePath(std::string line) {
-        std::string a;
-        int offset = 9;
-        a = line.substr(offset, line.size() - offset);
-        return line.substr(offset, line.size() - offset);
+        //check whether we have like d:\\ or c:/
+        if (line.find(":") != std::string::npos)
+            return line.substr(offset, line.length());
+
+        //otherwise the path needs to be relative to the model's directory
+        directory = getDirectory(path);
+        directory += '/';
+        file_name = line.substr(offset, line.length());
+        directory.append(file_name);
+        return toSingleSlash(directory);
     }
 
     ObjTexture getTexture(std::string path) {

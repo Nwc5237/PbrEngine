@@ -26,7 +26,7 @@ public:
 			glGenerateMipmap(GL_TEXTURE_2D);
 		}
 		else {
-			printf("Failed to load obj texture at path: %s\n", path);
+			printf("Failed to load obj texture at path: %s, with code: %s\n", path, stbi_failure_reason());
 			exit(0);
 		}
 

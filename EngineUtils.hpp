@@ -39,6 +39,32 @@ bool isDoubleSlashPath(std::string path) {
     exit(0);
 }
 
+/*
+replaces all / with \\ TODO add error handling in case there's a bad path, and add bounds checking.
+*/
+std::string toSingleSlash(std::string src) {
+    std::string replaced;
+    int i = 0;
+    char cur = src.at(i);
+    while(i < src.length()) {
+        cur = src.at(i);
+        if (cur == '\\') {
+
+            //when double slash
+            if (i + 1 < src.length() && src.at(i + 1) == '\\')
+                i++;
+            replaced += '/';
+            //i++;
+        }
+        else {
+            replaced += cur;
+        }
+        i++;
+    }
+
+    return replaced;
+}
+
 void readWhiteSpace(std::string str, int* pos) {
     while (*pos < str.length() && in(str.at(*pos), " \n\t"))
         (*pos)++;
