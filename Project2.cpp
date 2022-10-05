@@ -9,27 +9,11 @@
 
 
 #define GLM_ENABLE_EXPERIMENTAL
-//#include <D:\PA2_Starter\Vendor\gli-0.8.2.0\gli\gli\gli.hpp>
 
-bool useTex = true, waitForRelease = false, stop_rotating = false;
+bool useTex = true, waitForRelease = false,
+usePBR = true, waitForRelease2 = false;
 glm::vec3 lightPos(0.0f);
-float rot = 0.0f;
 float fader = 50.0f;
-
-//mapping a value i from the range [a, b] to the range [x, y]
-float map_val(float i, float a, float b, float x, float y)
-{
-	float percent_of_ab = (i - a) / (b - a);
-	return percent_of_ab * (y - x) + x;
-}
-
-vector<Model> load_scene(const char* folder)
-{
-	vector<Model> models;
-
-	return models;
-
-}
 
 int main()
 {
@@ -78,21 +62,48 @@ int main()
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	std::string json("{\"ColumbiaBldgSet_Tunnel\": [{\"location\": [4.42001485824585, 363.9205322265625, -58.55177688598633], \"rotation\": [0.0, -0.0, 0.0], \"scale\": [1.9501981735229492, 1.9501981735229492, 1.9501981735229492]}]}");
-	JsonParser p;
-	p.lexFile(json);
-	std::vector<JsonSceneComponent> components = p.parseJson();
 
-	ObjModel obj_model = ObjModel("C:/Users/ncala/Downloads/test_obj_file.obj");
+	/*Right here we're just reading in the json file*/
+	/*std::string json;
+	std::fstream newfile;
+	newfile.open("D:\\OpenGL_EdenExport\\scene_file.txt", std::ios::in);
+	if (newfile.is_open()) {
+		std::string line;
+		getline(newfile, line);
+		json.append(line);
+		newfile.close();
+	}
+
+
+	//now we're parsing the json file
+	JsonParser jsonParser;
+	jsonParser.lexFile(json);
+	std::vector<JsonSceneComponent> components = jsonParser.parseJson();
+
+	std::vector<ObjModel> sceneModels;
+	std::string modelFolder("D:\\OpenGL_EdenExport\\assets\\");
+	for (int i = 0; i < components.size(); i++) {
+		modelFolder = std::string("D:\\OpenGL_EdenExport\\assets\\");
+		modelFolder.append(components.at(i).modelPath.c_str());
+		sceneModels.push_back(ObjModel(modelFolder.c_str()));
+		printf("loaded %d/%d models\n", i, components.size());
+	}/**/
+
+
+	
+	ObjModel obj_model = ObjModel("C:/Users/ncala/Downloads/PBR_gun.obj"); //TODO this has a tga texture --- in texture loader check the file extensions
+	//ObjModel obj_model = ObjModel("C:\\Users\\ncala\\Downloads\\sphere.obj");
+																		   //ObjModel obj_model = ObjModel("D:\\OpenGL_EdenExport\\assets\\General_Statue_Key.obj");
+	//ObjModel obj_model = ObjModel("C:/Users/ncala/Downloads/test_obj_file.obj");
 	//ObjModel obj_model = ObjModel("C:/Users/ncala/Downloads/test_two_mesh_object.obj");
 	//ObjModel obj_model = ObjModel("C:/Users/ncala/Downloads/enterprise.obj");
 
 
 	// build and compile shaders
 	// -------------------------
-	Shader skyboxShader("../Project_2/Shaders/skyboxShader.vert", "../Project_2/Shaders/skyboxShader.frag");
 	Shader pbrShader("../Project_2/Shaders/pbrShader.vert", "../Project_2/Shaders/pbrShader.frag");
 	Shader hdriMapShader("../Project_2/Shaders/Cubemap.vert", "../Project_2/Shaders/Cubemap.frag");
+	Shader defShader("../Project_2/Shaders/QuadShader.vert", "../Project_2/Shaders/QuadShader.frag");
 
 	// set up vertex data (and buffer(s)) and configure vertex attributes
 	// ------------------------------------------------------------------
@@ -169,62 +180,57 @@ int main()
 	// Skybox uses the same vertices so no need to make a new one.  Just making a new name for sanity
 	unsigned int skyboxVAO = lightVAO;
 
-	// load textures
-	// -------------
-
-	std::vector<std::string> faces =
-	{
-		"../Project_2/Media/skybox/right.jpg",
-		"../Project_2/Media/skybox/left.jpg",
-		"../Project_2/Media/skybox/top.jpg",
-		"../Project_2/Media/skybox/bottom.jpg",
-		"../Project_2/Media/skybox/back.jpg",
-		"../Project_2/Media/skybox/front.jpg"
-	};
-	unsigned int cubemapTexture = loadCubemap(faces);
-
-	// load models
-	// -----------
-	Model sphere("../Project_2/Media/SphereModel/Sphere.obj");
-	//Model hall("../Project_2/Media/PT_assets/PTHallway2.obj");
-
-	//Model sphere("../Project_2/Media/cube_model/cube_model.fbx");
-	//load_scene("D:\BioshockClone\BlenderScene\NiceExport2");
-	Model hall("C:/Users/ncala/Downloads/Cerberus_by_Andrew_Maximov/Cerberus_LP.fbx");
-
 	//hdr map load
 	unsigned hdr_tex_id = load_environment_map("../Project_2/Media/textures/noon_grass_1k.hdr");
 
-	//pbr texture loading
-	unsigned int diffuse, roughness, metalness, normal;
-	/*	diffuse = loadTexture("../Project_2/Media/textures/metalCol.jpg");
-		roughness = loadTexture("../Project_2/Media/textures/metalRoughness.jpg");
-		metalness = loadTexture("../Project_2/Media/textures/metalMetalness.jpg");
-		normal = loadTexture("../Project_2/Media/textures/metalNorm.jpg");*/
+	//Multiple render targets for deferred rendering
+	unsigned int gBuffer, gPosition, gNormal; //metalness and roughness can be in the alpha channels of position and normal since they're one number
+	glGenFramebuffers(1, &gBuffer);
+	glBindFramebuffer(GL_FRAMEBUFFER, gBuffer);
 
-	diffuse = loadTexture("C:/Users/ncala/Downloads/Cerberus_A.jpg");
-	roughness = loadTexture("C:/Users/ncala/Downloads/Cerberus_R.jpg");
-	metalness = loadTexture("C:/Users/ncala/Downloads/Cerberus_M.jpg");
-	normal = loadTexture("C:/Users/ncala/Downloads/Cerberus_N.jpg");
+	glGenTextures(1, &gPosition);
+	glBindTexture(GL_TEXTURE_2D, gPosition);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, gPosition, 0);
 
-	diffuse = loadTexture("C:/Users/ncala/Downloads/Cerberus_by_Andrew_Maximov/Textures/Cerberus_A.tga");
-	roughness = loadTexture("C:/Users/ncala/Downloads/Cerberus_by_Andrew_Maximov/Textures/Cerberus_R.tga");
-	metalness = loadTexture("C:/Users/ncala/Downloads/Cerberus_by_Andrew_Maximov/Textures/Cerberus_M.tga");
-	normal = loadTexture("C:/Users/ncala/Downloads/Cerberus_by_Andrew_Maximov/Textures/Cerberus_N.tga");
+	/*glGenTextures(1, &gNormal);
+	glBindTexture(GL_TEXTURE_2D, gNormal);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, gNormal, 0);*/
 
-	int* bufsize, * nummips;
-	//GLuint img = texture_loadDDS("D:/PT_Remake_Blender/textures/shsb_hous001_w1_nrm.dds");
+	//glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gPosition, 0);
+	unsigned int attachments[1] = { GL_COLOR_ATTACHMENT0 };// , GL_COLOR_ATTACHMENT1 };
 
-	// positions of the point lights
-	glm::vec3 pointLightPositions[] = {
-		glm::vec3(0.7f,  0.2f,  2.0f),
-		glm::vec3(2.3f, -3.3f, -4.0f),
-		glm::vec3(-4.0f,  2.0f, -12.0f),
-		glm::vec3(0.0f,  0.0f, -3.0f)
-	};
+	glDrawBuffers(1, attachments);
+
+	unsigned int rboDepth;
+	glGenRenderbuffers(1, &rboDepth);
+	glBindRenderbuffer(GL_RENDERBUFFER, rboDepth);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, SCR_WIDTH, SCR_HEIGHT);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rboDepth);
+	// finally check if framebuffer is complete
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		std::cout << "Framebuffer not complete!" << std::endl;
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	
+
+	
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		return false;
+	//return frame buffer
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
 
 	// render loop
 	// -----------
+
+	float percent = 0.f;
 	while (!glfwWindowShouldClose(window))
 	{
 		// per-frame time logic
@@ -242,14 +248,25 @@ int main()
 
 		// render
 		// ------
+		
+		
+		//new stuf I added
+		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer);
+		glEnable(GL_DEPTH_TEST);
+
+
 		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		// draw scene as normal, get camera parameters
 		glm::mat4 model;
 		glm::mat4 view = camera.GetViewMatrix();
 		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
 		model = glm::rotate(model, glm::radians(10.0f * currentFrame), glm::vec3(1.0f, 0.3f, 0.5f));
+
+		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		//MY PBR SHADER SETUP
 		pbrShader.use();
@@ -258,8 +275,49 @@ int main()
 		pbrShader.setMat4("projection", projection);
 		pbrShader.setVec3("cameraPos", camera.Position);
 
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, lightPos);
+		model = glm::scale(model, glm::vec3(1.f));
+
+		pbrShader.setMat4("model", model);
+
+		//obj_model.Draw(pbrShader);
+
+		/*glm::mat4 model;
+		glm::mat4 view = camera.GetViewMatrix();
+		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+		model = glm::rotate(model, glm::radians(10.0f * currentFrame), glm::vec3(1.0f, 0.3f, 0.5f));
+
+		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		//MY PBR SHADER SETUP
+		defShader.use();
+		defShader.setMat4("model", model);
+		defShader.setMat4("view", view);
+		defShader.setMat4("projection", projection);
+		defShader.setVec3("cameraPos", camera.Position);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, lightPos);
+		model = glm::scale(model, glm::vec3(1.f));
+
+		defShader.setMat4("model", model);
+
+		obj_model.Draw(defShader);*/
+
+		
+
+		//MY PBR SHADER SETUP    
+		pbrShader.use();
+		pbrShader.setMat4("model", model);
+		pbrShader.setMat4("view", view);
+		pbrShader.setMat4("projection", projection);
+		pbrShader.setVec3("cameraPos", camera.Position);
+
 		pbrShader.setBool("useTex", useTex);
-		pbrShader.setVec3("lights[0].position", lightPos);
+		pbrShader.setBool("usePBR", usePBR);
+		pbrShader.setVec3("lights[0].position", glm::vec3(0.0f, 0.0f, 0.0f));
 		pbrShader.setVec3("lights[0].color", glm::vec3(0.5f, 0.5f, 0.5f));
 		pbrShader.setVec3("camPos", camera.Position);
 		pbrShader.setFloat("fader", fader);
@@ -271,59 +329,59 @@ int main()
 		pbrShader.setVec3("lights[3].position", glm::vec3(-5.200000, -2.200000, -19.200001));
 		pbrShader.setVec3("lights[3].color", glm::vec3(0.5f, 0.5f, 0.5f));
 
-
-		/**/glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, diffuse);
-		glUniform1i(glGetUniformLocation(pbrShader.ID, "diffuseTex"), 1);
-
-		glActiveTexture(GL_TEXTURE2);
-		glBindTexture(GL_TEXTURE_2D, roughness);
-		glUniform1i(glGetUniformLocation(pbrShader.ID, "roughnessTex"), 2);
-
-		glActiveTexture(GL_TEXTURE3);
-		glBindTexture(GL_TEXTURE_2D, metalness);
-		glUniform1i(glGetUniformLocation(pbrShader.ID, "metalnessTex"), 3);
-
-		glActiveTexture(GL_TEXTURE4);
-		glBindTexture(GL_TEXTURE_2D, normal);
-		glUniform1i(glGetUniformLocation(pbrShader.ID, "normalTex"), 4);/**/
-
 		model = glm::mat4(1.0f);
-
 		model = glm::translate(model, lightPos);
-		model = glm::scale(model, glm::vec3(.1f));
+		model = glm::scale(model, glm::vec3(1.f));
 
 		pbrShader.setMat4("model", model);
-		//sphere.Draw(pbrShader); //looks like passing this value isn't adding anything currently
 
 		obj_model.Draw(pbrShader);
 
-		for (unsigned int i = 0; i < 1; i++)
-		{
-			// calculate the model matrix for each object and pass it to shader before drawing
-			glm::mat4 box_model;
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glDisable(GL_DEPTH_TEST);
 
-			box_model = glm::scale(box_model, glm::vec3(.01f, .01f, .01f));
+		//start
+		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-			box_model = glm::translate(box_model, glm::vec3((float)((int)i % (int)5) + 2 * (i % 5), (float)(i / 5) + 2 * (i / 5), -5.0f));
-			box_model = glm::translate(box_model, glm::vec3(-5, -5, 0));
-			//box_model = glm::rotate(box_model, rot, glm::vec3(0.0f, 1.0f, 0.0f));
-			box_model = glm::rotate(box_model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+		defShader.use();
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, gPosition);
+		glUniform1i(glGetUniformLocation(pbrShader.ID, "diffuseTex"), 0);
+		renderQuad();
 
-			pbrShader.setFloat("roughnessF", map_val(i, 0, 25, 0, 1));
-			pbrShader.setFloat("metalnessF", map_val(i, 0, 25, 0, 1));
 
-			if (!stop_rotating)
-				rot += .00005;
 
-			pbrShader.setMat4("model", box_model);
-			//hall.Draw(pbrShader);
+		//sphere.Draw(pbrShader); //looks like passing this value isn't adding anything currently
 
-			box_model = glm::scale(box_model, glm::vec3(1, 1, 1));
-			pbrShader.setMat4("model", box_model);
-			//sphere.Draw(pbrShader);
+		
+		/*for (int i = 0; i < sceneModels.size(); i++) {
+			
+			//for every instance of this object
+			for (int j = 0; j < components.at(i).transformations.size(); j++) {
+				model = glm::mat4(1.0f);
 
-		}
+				glm::vec3 temp = components.at(i).transformations.at(j).location;
+				glm::vec3 trans(temp.x, temp.z, -(temp.y - 300.f));
+				model = glm::translate(model, percent * trans);
+				//model = glm::translate(model, components.at(i).transformations.at(j).location);
+				
+				//all of these axes are weird because of blender's axes. Find a cleaner way probably
+				model = glm::rotate(model, glm::radians(components.at(i).transformations.at(j).rotation.x), glm::vec3(1.0f, 0.0f, 0.0f));
+				model = glm::rotate(model, glm::radians(components.at(i).transformations.at(j).rotation.y), glm::vec3(0.0f, 0.0f, -1.0f));
+				model = glm::rotate(model, glm::radians(components.at(i).transformations.at(j).rotation.z), glm::vec3(0.0f, 1.0f, 0.0f));
+
+				temp = components.at(i).transformations.at(j).scale;
+				model = glm::scale(model, glm::vec3(temp.x, temp.z, temp.y));
+
+				pbrShader.setMat4("model", model);
+				sceneModels.at(i).Draw(pbrShader);
+			}
+		}/**/
+
+		if (percent < 1)
+			percent += .001;
+
 		glBindVertexArray(0);
 
 
@@ -428,6 +486,22 @@ void processInput(GLFWwindow* window)
 		//stop_rotating = !stop_rotating;
 		waitForRelease = false;
 	}
+
+	//doing roughness change in shader
+	if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS)
+		waitForRelease2 = true;
+
+	if (glfwGetKey(window, GLFW_KEY_R) == GLFW_RELEASE && waitForRelease2)
+	{
+		usePBR = !usePBR;
+		//stop_rotating = !stop_rotating;
+		waitForRelease2 = false;
+	}
+
+	if (glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS)
+		fader -= .01;
+	if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS)
+		fader += .01;
 
 	// figure out what to change
 	bool shift = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) || glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT);
@@ -583,3 +657,33 @@ unsigned int loadCubemap(std::vector<std::string> faces)
 
 	return textureID;
 }
+
+unsigned int quadVAO = 0;
+unsigned int quadVBO;
+void renderQuad()
+{
+	if (quadVAO == 0)
+	{
+		float quadVertices[] = {
+			// positions        // texture Coords
+			-1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
+			-1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
+			 1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
+			 1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+		};
+		// setup plane VAO
+		glGenVertexArrays(1, &quadVAO);
+		glGenBuffers(1, &quadVBO);
+		glBindVertexArray(quadVAO);
+		glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+	}
+	glBindVertexArray(quadVAO);
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	glBindVertexArray(0);
+}
+

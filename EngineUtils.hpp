@@ -113,3 +113,10 @@ CREATE_FLOAT:
     return std::stof(str.substr(start, end - start));
 }
 
+// mapping a value i from the range[a, b] to the range[x, y]
+float map_val(float i, float a, float b, float x, float y)
+{
+    float percent_of_ab = (i - a) / (b - a);
+    return percent_of_ab * (y - x) + x;
+}
+
