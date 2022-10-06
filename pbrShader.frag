@@ -1,5 +1,11 @@
 #version 330 core
-out vec4 FragColor;
+
+layout (location = 0) out vec4 gPosition;
+layout (location = 1) out vec4 gNormal;
+layout (location = 2) out vec4 gAlbedo;
+layout (location = 3) out vec4 gRoughMetal;
+
+//out vec4 FragColor;
 
 #define NR_POINT_LIGHTS 4
 
@@ -21,6 +27,7 @@ uniform sampler2D diffuseTex;
 uniform sampler2D normalTex;
 uniform sampler2D roughnessTex;
 uniform sampler2D metalnessTex;
+uniform sampler2D gPosTex;
 
 uniform float fader;
 
@@ -154,7 +161,7 @@ void main()
 		N = mapNormal();
 		
 		if(!useTex) {
-			N = vec3(N.x, -N.y, N.z);
+			N = Normal;//vec3(N.x, -N.y, N.z);
 		}
 	
 		roughness = texture(roughnessTex, TexCoords).x;
@@ -182,10 +189,15 @@ void main()
 	//gamma correction
 	vec3 mapped = final / (final + vec3(1.0)); //why is this the value for mapped?
 	mapped = pow(mapped, vec3(1.0 / 2.2));
-	FragColor = vec4(mapped, texture(diffuseTex, TexCoords).a);
-	//FragColor = vec4(N, 1.0f);
+	//FragColor = vec4(mapped, texture(diffuseTex, TexCoords).a);
+	
+	gPosition = vec4(FragPos, 1.0f); //should be able to add roughness and metalness in alpha channel but it's being weird so we're doing this
+	gNormal = vec4(mapNormal(), 1.0f);
+	gAlbedo = vec4(texture(diffuseTex, TexCoords).rgb, 1.0f);
+	//gRoughMetal = vec4(roughness, metalness, 0.0f, 1.0f);
+	gRoughMetal = vec4(mapped, texture(diffuseTex, TexCoords).a);
 
-	if(!usePBR)
+	/*if(!usePBR)
 	{
 		FragColor = vec4(0.0f);
 		for(int i=0; i < 1; i++)
@@ -193,19 +205,7 @@ void main()
 			v = normalize(camPos - FragPos);
 			l = normalize(lights[i].position - FragPos);
 			H = normalize(l + v);
-			//N = Normal; //mapNormal();
-			FragColor += vec4(texture(diffuseTex, TexCoords).rgb * max(0, dot(N, l)) + lights[i].color * pow(max(0, dot(N, H)), 100), 1.0f);
-		}
-	}
-	/*else
-	{
-		FragColor = vec4(0.0f);
-		for(int i=0; i < 4; i++)
-		{
-			v = normalize(camPos - FragPos);
-			l = normalize(lights[i].position - FragPos);
-			H = normalize(l + v);
-			N = mapNormal();
+			N = Normal; //mapNormal();
 			FragColor += vec4(texture(diffuseTex, TexCoords).rgb * max(0, dot(N, l)) + lights[i].color * pow(max(0, dot(N, H)), 100), 1.0f);
 		}
 	}*/
