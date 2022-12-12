@@ -26,6 +26,9 @@ class ObjModel {
 public:
     const char* path;
 
+    //default constructor
+    ObjModel( ) { }
+
 	//constuctor
 	ObjModel(const char *path) {
         this->path = path;

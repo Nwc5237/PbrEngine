@@ -9,10 +9,11 @@
 
 
 #define GLM_ENABLE_EXPERIMENTAL
+//#define USE_SCENE_FILE //comment this out when using single objects
 
 bool useTex = true, waitForRelease = false,
 usePBR = true, waitForRelease2 = false;
-glm::vec3 lightPos(0.0f);
+glm::vec3 lightPos(0.0f, -1.0f, 0.0f);
 float fader = 50.0f;
 
 int main()
@@ -41,11 +42,12 @@ int main()
 	}
 	glfwMakeContextCurrent(window);
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-	glfwSetCursorPosCallback(window, mouse_callback);
+	glfwSetCursorPosCallback(window, mouse_move_callback);
+	glfwSetMouseButtonCallback(window, mouse_button_callback);
 	glfwSetScrollCallback(window, scroll_callback);
 
 	// tell GLFW to capture our mouse
-	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL); //GLFW_CURSOR_DISABLED
 
 	// glad: load all OpenGL function pointers
 	// ---------------------------------------
@@ -62,9 +64,9 @@ int main()
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-
+#ifdef USE_SCENE_FILE
 	/*Right here we're just reading in the json file*/
-	/*std::string json;
+	std::string json;
 	std::fstream newfile;
 	newfile.open("D:\\OpenGL_EdenExport\\scene_file.txt", std::ios::in);
 	if (newfile.is_open()) {
@@ -87,17 +89,16 @@ int main()
 		modelFolder.append(components.at(i).modelPath.c_str());
 		sceneModels.push_back(ObjModel(modelFolder.c_str()));
 		printf("loaded %d/%d models\n", i, components.size());
-	}/**/
+	}
+#endif
 
-
-	
 	ObjModel obj_model = ObjModel("C:/Users/ncala/Downloads/PBR_gun.obj"); //TODO this has a tga texture --- in texture loader check the file extensions
 	//ObjModel obj_model = ObjModel("C:\\Users\\ncala\\Downloads\\sphere.obj");
-																		   //ObjModel obj_model = ObjModel("D:\\OpenGL_EdenExport\\assets\\General_Statue_Key.obj");
+	//ObjModel obj_model = ObjModel("D:\\OpenGL_EdenExport\\assets\\General_Statue_Key.obj");
 	//ObjModel obj_model = ObjModel("C:/Users/ncala/Downloads/test_obj_file.obj");
 	//ObjModel obj_model = ObjModel("C:/Users/ncala/Downloads/test_two_mesh_object.obj");
-	//ObjModel obj_model = ObjModel("C:/Users/ncala/Downloads/enterprise.obj");
 
+	GameObject gameObject(obj_model, glm::vec3(0.0f));
 
 	// build and compile shaders
 	// -------------------------
@@ -184,7 +185,7 @@ int main()
 	unsigned hdr_tex_id = load_environment_map("../Project_2/Media/textures/noon_grass_1k.hdr");
 
 	//Multiple render targets for deferred rendering
-	unsigned int gBuffer, gPosition, gNormal, gAlbedo, gRoughMetal; //metalness and roughness can be in the alpha channels of position and normal since they're one number
+	unsigned int gBuffer, gPosition, gNormal, gAlbedo, gRoughMetal, gAmbient; //metalness and roughness can be in the alpha channels of position and normal since they're one number
 	glGenFramebuffers(1, &gBuffer);
 	glBindFramebuffer(GL_FRAMEBUFFER, gBuffer);
 
@@ -216,10 +217,17 @@ int main()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D, gRoughMetal, 0);
 
-	//glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gPosition, 0);
-	unsigned int attachments[4] = { GL_COLOR_ATTACHMENT0 , GL_COLOR_ATTACHMENT1 , GL_COLOR_ATTACHMENT2 , GL_COLOR_ATTACHMENT3 };
+	glGenTextures(1, &gAmbient);
+	glBindTexture(GL_TEXTURE_2D, gAmbient);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT4, GL_TEXTURE_2D, gAmbient, 0);
 
-	glDrawBuffers(4, attachments);
+	//glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gPosition, 0);
+	unsigned int attachments[5] = { GL_COLOR_ATTACHMENT0 , GL_COLOR_ATTACHMENT1 , GL_COLOR_ATTACHMENT2 , GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4 };
+
+	glDrawBuffers(5, attachments);
 
 	unsigned int rboDepth;
 	glGenRenderbuffers(1, &rboDepth);
@@ -268,9 +276,9 @@ int main()
 		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer);
 		glEnable(GL_DEPTH_TEST);
 
-		glm::mat4 model;
-		glm::mat4 view = camera.GetViewMatrix();
-		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+		
+		view = camera.GetViewMatrix();
+		projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
 		model = glm::rotate(model, glm::radians(10.0f * currentFrame), glm::vec3(1.0f, 0.3f, 0.5f));
 
 		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
@@ -288,33 +296,6 @@ int main()
 		model = glm::scale(model, glm::vec3(1.f));
 
 		pbrShader.setMat4("model", model);
-
-		//obj_model.Draw(pbrShader);
-
-		/*glm::mat4 model;
-		glm::mat4 view = camera.GetViewMatrix();
-		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
-		model = glm::rotate(model, glm::radians(10.0f * currentFrame), glm::vec3(1.0f, 0.3f, 0.5f));
-
-		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		//MY PBR SHADER SETUP
-		defShader.use();
-		defShader.setMat4("model", model);
-		defShader.setMat4("view", view);
-		defShader.setMat4("projection", projection);
-		defShader.setVec3("cameraPos", camera.Position);
-
-		model = glm::mat4(1.0f);
-		model = glm::translate(model, lightPos);
-		model = glm::scale(model, glm::vec3(1.f));
-
-		defShader.setMat4("model", model);
-
-		obj_model.Draw(defShader);*/
-
-		
 
 		//MY PBR SHADER SETUP    
 		pbrShader.use();
@@ -345,14 +326,46 @@ int main()
 
 		obj_model.Draw(pbrShader);
 
+#ifdef USE_SCENE_FILE
+		for (int i = 0; i < sceneModels.size(); i++) {
+
+			//for every instance of this object
+			for (int j = 0; j < components.at(i).transformations.size(); j++) {
+				model = glm::mat4(1.0f);
+
+				glm::vec3 temp = components.at(i).transformations.at(j).location;
+				glm::vec3 trans(temp.x, temp.z, -(temp.y - 300.f));
+				model = glm::translate(model, percent * trans);
+				//model = glm::translate(model, components.at(i).transformations.at(j).location);
+
+				//all of these axes are weird because of blender's axes. Find a cleaner way probably
+				model = glm::rotate(model, glm::radians(components.at(i).transformations.at(j).rotation.x), glm::vec3(1.0f, 0.0f, 0.0f));
+				model = glm::rotate(model, glm::radians(components.at(i).transformations.at(j).rotation.y), glm::vec3(0.0f, 0.0f, -1.0f));
+				model = glm::rotate(model, glm::radians(components.at(i).transformations.at(j).rotation.z), glm::vec3(0.0f, 1.0f, 0.0f));
+
+				temp = components.at(i).transformations.at(j).scale;
+				model = glm::scale(model, glm::vec3(temp.x, temp.z, temp.y));
+
+				pbrShader.setMat4("model", model);
+				sceneModels.at(i).Draw(pbrShader);
+			}
+		}
+#endif
+
+		if (percent < 1)
+			percent += .001;
+
+		glfwPollEvents(); // before we unbind the framebuffer with the depth
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glDisable(GL_DEPTH_TEST);
+
 
 		//start
 		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		defShader.use();
+		defShader.setBool("useTex", useTex);
 		
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, gPosition);
@@ -369,50 +382,18 @@ int main()
 		glActiveTexture(GL_TEXTURE3);
 		glBindTexture(GL_TEXTURE_2D, gRoughMetal);
 		glUniform1i(glGetUniformLocation(defShader.ID, "RoughMetal"), 3);
+
+		glActiveTexture(GL_TEXTURE4);
+		glBindTexture(GL_TEXTURE_2D, gAmbient);
+		glUniform1i(glGetUniformLocation(defShader.ID, "Ambient"), 4);
 		
 		defShader.setVec3("camPos", camera.Position);
-
 		renderQuad();
-
-
-
-		//sphere.Draw(pbrShader); //looks like passing this value isn't adding anything currently
-
-		
-		/*for (int i = 0; i < sceneModels.size(); i++) {
-			
-			//for every instance of this object
-			for (int j = 0; j < components.at(i).transformations.size(); j++) {
-				model = glm::mat4(1.0f);
-
-				glm::vec3 temp = components.at(i).transformations.at(j).location;
-				glm::vec3 trans(temp.x, temp.z, -(temp.y - 300.f));
-				model = glm::translate(model, percent * trans);
-				//model = glm::translate(model, components.at(i).transformations.at(j).location);
-				
-				//all of these axes are weird because of blender's axes. Find a cleaner way probably
-				model = glm::rotate(model, glm::radians(components.at(i).transformations.at(j).rotation.x), glm::vec3(1.0f, 0.0f, 0.0f));
-				model = glm::rotate(model, glm::radians(components.at(i).transformations.at(j).rotation.y), glm::vec3(0.0f, 0.0f, -1.0f));
-				model = glm::rotate(model, glm::radians(components.at(i).transformations.at(j).rotation.z), glm::vec3(0.0f, 1.0f, 0.0f));
-
-				temp = components.at(i).transformations.at(j).scale;
-				model = glm::scale(model, glm::vec3(temp.x, temp.z, temp.y));
-
-				pbrShader.setMat4("model", model);
-				sceneModels.at(i).Draw(pbrShader);
-			}
-		}/**/
-
-		if (percent < 1)
-			percent += .001;
 
 		glBindVertexArray(0);
 
-
-
-
 		// draw skybox as last
-		glDepthFunc(GL_LEQUAL);  // change depth function so depth test passes when values are equal to depth buffer's content
+		/*glDepthFunc(GL_LEQUAL);  // change depth function so depth test passes when values are equal to depth buffer's content
 		hdriMapShader.use();
 
 		glActiveTexture(GL_TEXTURE1);
@@ -425,8 +406,8 @@ int main()
 		// skybox cube
 		glBindVertexArray(skyboxVAO);
 		glActiveTexture(GL_TEXTURE0);
-		//glDrawArrays(GL_TRIANGLES, 0, 36);
-		glBindVertexArray(0);
+		glDrawArrays(GL_TRIANGLES, 0, 36);
+		glBindVertexArray(0);*/
 
 		glDepthFunc(GL_LESS); // set depth function back to default
 
@@ -434,7 +415,7 @@ int main()
 							  // -------------------------------------------------------------------------------
 
 		glfwSwapBuffers(window);
-		glfwPollEvents();
+		//glfwPollEvents();
 	}
 
 	// optional: de-allocate all resources once they've outlived their purpose:
@@ -546,7 +527,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 
 // glfw: whenever the mouse moves, this callback is called
 // -------------------------------------------------------
-void mouse_callback(GLFWwindow* window, double xpos, double ypos)
+void mouse_move_callback(GLFWwindow* window, double xpos, double ypos)
 {
 	if (firstMouse)
 	{
@@ -561,7 +542,60 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 	lastX = xpos;
 	lastY = ypos;
 
-	camera.ProcessMouseMovement(xoffset, yoffset);
+	if (isPanning)
+	{
+		camera.ProcessMouseMovement(xoffset, yoffset);
+	}
+
+	cursor_pos_x = floor(xpos);
+	cursor_pos_y = floor(ypos);
+}
+
+//going to use these to do an unProject, then "select" the object with the nearest (x, y) coords
+//Will probably want to use a quad tree. Maybe not yet though since click actions won't be super
+//common, and even if it takes a bit, it's not imporant that it's fast just yet. Just want it working
+void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
+{
+	if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE)
+	{
+		int pixel_blockx, pixel_blocky;
+		float depth;
+		
+		pixel_blockx = 1;
+		pixel_blocky = 1;
+		
+		glReadPixels(cursor_pos_x,
+			SCR_HEIGHT - cursor_pos_y - 1,
+			pixel_blockx,
+			pixel_blocky,
+			GL_DEPTH_COMPONENT,
+			GL_FLOAT,
+			&depth);
+		
+
+		glm::vec3 unprojected_coords = glm::unProject(
+			glm::vec3((float)cursor_pos_x, (float)cursor_pos_y, depth),
+			model,
+			projection,
+			glm::vec4(0, 0, SCR_WIDTH, SCR_HEIGHT)
+		);
+
+		printf("(%d, %d, %f) -> (%f, %f, %f)\n", cursor_pos_x, cursor_pos_y, depth,
+			unprojected_coords.x + camera.Position.x,
+			unprojected_coords.y + camera.Position.y,
+			unprojected_coords.z + camera.Position.z
+		);
+	}
+	else if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS)
+	{
+		//start panning
+		isPanning = true;
+	}
+	else if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_RELEASE)
+	{
+		//end panning
+		isPanning = false;
+	}
 }
 
 // glfw: whenever the mouse scroll wheel scrolls, this callback is called
@@ -710,4 +744,3 @@ void renderQuad()
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 	glBindVertexArray(0);
 }
-

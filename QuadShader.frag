@@ -8,21 +8,10 @@ uniform sampler2D PositionRoughness;
 uniform sampler2D NormalMetalness;
 uniform sampler2D Albedo;
 uniform sampler2D RoughMetal;
+uniform sampler2D Ambient;
 
 uniform bool useTex;
 
-/*void main()
-{
-	vec4 final = vec4(texture(tex, TexCoords).rgb, 1.0f);
-
-	if(!useTex) {
-		final = vec4(texture(tex2, TexCoords).rgb, 1.0f);
-	}
-	FragColor = final;
-}*/
-
-
-/////////////////////////////////////////////////
 //from learnopengl
 float DistributionGGX(vec3 N, vec3 H, float a)
 {
@@ -132,14 +121,14 @@ void main()
 	{
 
 		v = normalize(camPos - FragPos);
-		l = normalize(vec3(0, 0, 0) - FragPos);
+		l =  normalize(vec3(0, 0, 0) - FragPos);
 		H = normalize(l + v);
 		
-		radiance = 50.0 * vec3(1.0f) * Attenuate(vec3(0, 0, 0), FragPos);
+		radiance = 25.0 * vec3(1.0f) * Attenuate(vec3(0, 0, 0), FragPos);
 	
 		
 		D = DistributionGGX1(N, H, roughness);
-		G = 1.0f / pow(max(dot(l, H), .001f), 2.0f);                 //ISSUE I think these are getting really big for some reason
+		G = 1.0f / pow(max(dot(l, H), .001f), 2.0f);
 		f = FresnelSchlick1(max(dot(H, N), 0.0f), metalness);
 	
 		F = vec3(f);
@@ -156,5 +145,8 @@ void main()
 	//gamma correction
 	vec3 mapped = final / (final + vec3(1.0)); //why is this the value for mapped?
 	mapped = pow(mapped, vec3(1.0 / 2.2));
+
+	mapped += texture(Ambient, TexCoords).rgb;
+
 	FragColor = vec4(mapped, 1.0f); //texture(diffuseTex, TexCoords).a); --- none of this business in deferred shading
 }
