@@ -9,8 +9,9 @@ uniform sampler2D NormalMetalness;
 uniform sampler2D Albedo;
 uniform sampler2D RoughMetal;
 uniform sampler2D Ambient;
-
 uniform bool useTex;
+
+uniform float fader;
 
 //from learnopengl
 float DistributionGGX(vec3 N, vec3 H, float a)
@@ -117,14 +118,18 @@ void main()
 	N = texture(NormalMetalness, TexCoords).rgb;
 	metalness = texture(RoughMetal, TexCoords).y;
 
+	vec3 tempLightPos = vec3(0, 0, 0);
+	
+	vec3 directional_light = normalize(vec3(.1, -1, .05));
+
 	for(int i=0; i<1; i++)
 	{
 
 		v = normalize(camPos - FragPos);
-		l =  normalize(vec3(0, 0, 0) - FragPos);
+		l =  normalize(tempLightPos - FragPos);
 		H = normalize(l + v);
 		
-		radiance = 25.0 * vec3(1.0f) * Attenuate(vec3(0, 0, 0), FragPos);
+		radiance = fader * vec3(1.0f) * Attenuate(tempLightPos, FragPos);
 	
 		
 		D = DistributionGGX1(N, H, roughness);
@@ -142,10 +147,32 @@ void main()
 		final += Lo;
 	}
 
+	//directional light -----------------------------------------------------------------------
+		/*v = normalize(camPos - FragPos);
+		l =  normalize(tempLightPos - FragPos);
+		H = normalize(l + v);
+		
+		radiance = 25.0 * vec3(1.0f) * Attenuate(tempLightPos, FragPos);
+	
+		
+		D = DistributionGGX1(N, H, roughness);
+		G = 1.0f / pow(max(dot(l, H), .001f), 2.0f);
+		f = FresnelSchlick1(max(dot(H, N), 0.0f), metalness);
+	
+		F = vec3(f);
+		kS = F;
+		kD = vec3(1.0f) - kS;
+		spec = (D * G * F) / 4.0f;
+
+		NdotL = max(dot(N, l), 0.0f);
+		Lo = (kD * vec3(texture(Albedo, TexCoords).rgb) / pi + spec) * radiance * NdotL;
+
+		final += Lo;*/
+	//-----------------------------------------------------------------------------------------
+
 	//gamma correction
 	vec3 mapped = final / (final + vec3(1.0)); //why is this the value for mapped?
 	mapped = pow(mapped, vec3(1.0 / 2.2));
-
 	mapped += texture(Ambient, TexCoords).rgb;
 
 	FragColor = vec4(mapped, 1.0f); //texture(diffuseTex, TexCoords).a); --- none of this business in deferred shading

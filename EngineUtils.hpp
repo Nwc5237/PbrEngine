@@ -120,3 +120,7 @@ float map_val(float i, float a, float b, float x, float y)
     return percent_of_ab * (y - x) + x;
 }
 
+bool equals(float a, float b)
+{
+    return abs(a - b) < .0001;
+}

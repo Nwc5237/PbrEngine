@@ -11,20 +11,23 @@ typedef struct Transform
 
 class GameObject
 {
+
 public:
-	glm::vec3 position;
 	ObjModel model;
 	Transform transform;
+	bool isSelected;
+	glm::vec3 stencilColor;
+	int index; //instance index --- really want a static for keys
 
 	GameObject(ObjModel model, glm::vec3 position)
 	{
 		this->model = model;
-		this->position = position;
 		this->transform = {
-			glm::vec3(0),
+			position,
 			glm::vec3(0),
 			glm::vec3(0)
 		};
+		this->isSelected = false;
 	}
 
 	void draw(Shader shader)
@@ -32,6 +35,7 @@ public:
 		glm::mat4 model_mat = glm::mat4(1.0f);
 		model_mat = glm::translate(model_mat, transform.location); //can add rotation and scale stuff later
 		shader.setMat4("model", model_mat);
+		shader.setBool("isHighlighted", isSelected);
 
 		//our asset model
 		model.Draw(shader);

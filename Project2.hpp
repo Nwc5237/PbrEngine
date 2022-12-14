@@ -20,7 +20,8 @@
 #include <heightmap.hpp>
 #include <track.hpp>
 #include <model.hpp>
-#include <ObjModel.hpp>
+#include "ObjModel.hpp"
+#include "GameObject.hpp"
 
 // Basic C++ and C headers
 #include <iostream>
@@ -42,12 +43,12 @@
 
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
-void mouse_callback(GLFWwindow* window, double xpos, double ypos);
+void mouse_move_callback(GLFWwindow* window, double xpos, double ypos);
+void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void processInput(GLFWwindow *window);
 unsigned int loadTexture(const char *path);
-unsigned int loadCubemap(std::vector<std::string> faces);
-unsigned load_environment_map(const char *);
+void renderQuad();
 
 
 // settings
@@ -71,15 +72,23 @@ bool drawBoxes = true;
 bool quaterians = true;
 bool drawNormals = false;
 
-// Transformation Matrices
-glm::vec3 translation   = glm::vec3(0.0f, 0.0f, 0.0f);
-glm::vec3 rotation_rate = glm::vec3(0.0f, 0.0f, 0.0f);
-glm::vec3 rotation_euler      = glm::vec3(0.0f, 0.0f, 0.0f);
-glm::quat rotation   =   glm::quat(glm::vec3(0.0f, 0.0f, 0.0f));
-glm::vec3 scale         = glm::vec3(1.0f, 1.0f, 1.0f);
-
 // Step size of transformations
 float step_multiplier = 1.0f;
 
 // Last Press
 float last_pressed = 0.0f;
+
+//mouse position coordinate
+int cursor_pos_x = 0;
+int cursor_pos_y = 0;
+
+//when right mouse button is down, we can move around like unreal editor
+bool isPanning = false;
+
+glm::mat4 view, model, projection;
+unsigned int quadVAO = 0;
+unsigned int quadVBO;
+
+std::vector<GameObject> gameObjects;
+
+float fader = 25.0f;

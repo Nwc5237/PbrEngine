@@ -19,6 +19,11 @@ uniform sampler2D metalnessTex;
 
 uniform bool useTex;
 uniform bool usePBR;
+uniform bool isHighlighted;
+
+//selection stuff
+uniform bool isSelectionBuffer;
+uniform vec3 selectionIndex;
 
 //returns the normal for this fragment
 vec3 mapNormal()
@@ -64,9 +69,15 @@ void main()
 	gAmbient = vec4(vec3(.03) * gAlbedo.rgb, 1.0f);
 
 	//highlighting
-	if(!useTex)
+	if(isHighlighted)
 	{
 		gAmbient = vec4(1.0f, 0.2f, 0.0f, 1.0f);
+	}
+	
+	if(isSelectionBuffer) //eventually do something with vec4s and mod to make use of 255^4 options availble. that's enough possible game objects to select. 255 is too small though
+	{
+		vec4 col = vec4(selectionIndex, 1.0f);
+		gPosition = col;
 	}
 }
 

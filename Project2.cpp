@@ -13,8 +13,7 @@
 
 bool useTex = true, waitForRelease = false,
 usePBR = true, waitForRelease2 = false;
-glm::vec3 lightPos(0.0f, -1.0f, 0.0f);
-float fader = 50.0f;
+glm::vec3 lightPos(0.0f, 5.0f, 0.0f);
 
 int main()
 {
@@ -47,7 +46,7 @@ int main()
 	glfwSetScrollCallback(window, scroll_callback);
 
 	// tell GLFW to capture our mouse
-	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL); //GLFW_CURSOR_DISABLED
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 
 	// glad: load all OpenGL function pointers
 	// ---------------------------------------
@@ -62,6 +61,7 @@ int main()
 	glEnable(GL_MULTISAMPLE); // Enabled by default on some drivers, but not all so always enable to make sure
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_BLEND);
+	glEnable(GL_STENCIL_TEST);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 #ifdef USE_SCENE_FILE
@@ -91,98 +91,18 @@ int main()
 		printf("loaded %d/%d models\n", i, components.size());
 	}
 #endif
+	ObjModel obj_model = ObjModel("C:/Users/ncala/Downloads/PBR_gun.obj");
 
-	ObjModel obj_model = ObjModel("C:/Users/ncala/Downloads/PBR_gun.obj"); //TODO this has a tga texture --- in texture loader check the file extensions
-	//ObjModel obj_model = ObjModel("C:\\Users\\ncala\\Downloads\\sphere.obj");
-	//ObjModel obj_model = ObjModel("D:\\OpenGL_EdenExport\\assets\\General_Statue_Key.obj");
-	//ObjModel obj_model = ObjModel("C:/Users/ncala/Downloads/test_obj_file.obj");
-	//ObjModel obj_model = ObjModel("C:/Users/ncala/Downloads/test_two_mesh_object.obj");
-
-	GameObject gameObject(obj_model, glm::vec3(0.0f));
+	for(int i = 1; i < 6; i++)
+	{
+		gameObjects.push_back(GameObject(obj_model, glm::vec3(0.0f, -i, 0.0f)));
+		gameObjects.back().stencilColor = glm::vec3(0.0f, 0.0f, i / 255.0f);
+	}
 
 	// build and compile shaders
 	// -------------------------
 	Shader pbrShader("../Project_2/Shaders/pbrShader.vert", "../Project_2/Shaders/pbrShader.frag");
-	Shader hdriMapShader("../Project_2/Shaders/Cubemap.vert", "../Project_2/Shaders/Cubemap.frag");
 	Shader defShader("../Project_2/Shaders/QuadShader.vert", "../Project_2/Shaders/QuadShader.frag");
-
-	// set up vertex data (and buffer(s)) and configure vertex attributes
-	// ------------------------------------------------------------------
-	float vertices[] = {
-		// positions          // normals           // texture coords
-		-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f,  0.0f,
-		0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f,  0.0f,
-		0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f,  1.0f,
-		0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f,  1.0f,
-		-0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f,  1.0f,
-		-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f,  0.0f,
-
-		-0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  0.0f,
-		0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f,  0.0f,
-		0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f,  1.0f,
-		0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f,  1.0f,
-		-0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  1.0f,
-		-0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  0.0f,
-
-		-0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f,  0.0f,
-		-0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  1.0f,  1.0f,
-		-0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f,  1.0f,
-		-0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f,  1.0f,
-		-0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  0.0f,  0.0f,
-		-0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f,  0.0f,
-
-		0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f,  0.0f,
-		0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  1.0f,  1.0f,
-		0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f,  1.0f,
-		0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f,  1.0f,
-		0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  0.0f,  0.0f,
-		0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f,  0.0f,
-
-		-0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f,  1.0f,
-		0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  1.0f,  1.0f,
-		0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f,  0.0f,
-		0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f,  0.0f,
-		-0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  0.0f,  0.0f,
-		-0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f,  1.0f,
-
-		-0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  1.0f,
-		0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  1.0f,  1.0f,
-		0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f,  0.0f,
-		0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f,  0.0f,
-		-0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  0.0f,
-		-0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  1.0f
-	};
-
-	// first, configure the cube's VAO (and VBO)
-	unsigned int VBO, cubeVAO;
-	glGenVertexArrays(1, &cubeVAO);
-	glGenBuffers(1, &VBO);
-
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-	glBindVertexArray(cubeVAO);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-	glEnableVertexAttribArray(2);
-
-	// second, configure the light's VAO (VBO stays the same; the vertices are the same for the light object which is also a 3D cube)
-	unsigned int lightVAO;
-	glGenVertexArrays(1, &lightVAO);
-	glBindVertexArray(lightVAO);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	// note that we update the lamp's position attribute's stride to reflect the updated buffer data
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(0);
-
-	// Skybox uses the same vertices so no need to make a new one.  Just making a new name for sanity
-	unsigned int skyboxVAO = lightVAO;
-
-	//hdr map load
-	unsigned hdr_tex_id = load_environment_map("../Project_2/Media/textures/noon_grass_1k.hdr");
 
 	//Multiple render targets for deferred rendering
 	unsigned int gBuffer, gPosition, gNormal, gAlbedo, gRoughMetal, gAmbient; //metalness and roughness can be in the alpha channels of position and normal since they're one number
@@ -224,7 +144,6 @@ int main()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT4, GL_TEXTURE_2D, gAmbient, 0);
 
-	//glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gPosition, 0);
 	unsigned int attachments[5] = { GL_COLOR_ATTACHMENT0 , GL_COLOR_ATTACHMENT1 , GL_COLOR_ATTACHMENT2 , GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4 };
 
 	glDrawBuffers(5, attachments);
@@ -234,16 +153,15 @@ int main()
 	glBindRenderbuffer(GL_RENDERBUFFER, rboDepth);
 	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, SCR_WIDTH, SCR_HEIGHT);
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rboDepth);
+	
 	// finally check if framebuffer is complete
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 		std::cout << "Framebuffer not complete!" << std::endl;
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-	
-
-	
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 		return false;
+
 	//return frame buffer
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
@@ -263,6 +181,7 @@ int main()
 
 		// weighted avg for framerate
 		framerate = (0.4f / (deltaTime)+1.6f * framerate) / 2.0f;
+		printf("framerate: %f\n", framerate);
 
 		// input
 		// -----
@@ -271,46 +190,30 @@ int main()
 		// render
 		// ------
 		
-		
 		//new stuf I added
 		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer);
 		glEnable(GL_DEPTH_TEST);
 
-		
 		view = camera.GetViewMatrix();
 		projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
 		model = glm::rotate(model, glm::radians(10.0f * currentFrame), glm::vec3(1.0f, 0.3f, 0.5f));
 
 		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
 		//MY PBR SHADER SETUP
 		pbrShader.use();
 		pbrShader.setMat4("model", model);
 		pbrShader.setMat4("view", view);
 		pbrShader.setMat4("projection", projection);
-		pbrShader.setVec3("cameraPos", camera.Position);
+		pbrShader.setVec3("camPos", camera.Position);
 
-		model = glm::mat4(1.0f);
-		model = glm::translate(model, lightPos);
-		model = glm::scale(model, glm::vec3(1.f));
-
-		pbrShader.setMat4("model", model);
-
-		//MY PBR SHADER SETUP    
-		pbrShader.use();
-		pbrShader.setMat4("model", model);
-		pbrShader.setMat4("view", view);
-		pbrShader.setMat4("projection", projection);
-		pbrShader.setVec3("cameraPos", camera.Position);
-
+		//testing uniform bools
 		pbrShader.setBool("useTex", useTex);
 		pbrShader.setBool("usePBR", usePBR);
-		pbrShader.setVec3("lights[0].position", glm::vec3(0.0f, 0.0f, 0.0f));
-		pbrShader.setVec3("lights[0].color", glm::vec3(0.5f, 0.5f, 0.5f));
-		pbrShader.setVec3("camPos", camera.Position);
-		pbrShader.setFloat("fader", fader);
 
+		pbrShader.setVec3("lights[0].position", lightPos);
+		pbrShader.setVec3("lights[0].color", glm::vec3(0.5f, 0.5f, 0.5f));
 		pbrShader.setVec3("lights[1].position", glm::vec3(-5.000000, -2.400000, -27.600033));
 		pbrShader.setVec3("lights[1].color", glm::vec3(0.5f, 0.5f, 0.5f));
 		pbrShader.setVec3("lights[2].position", glm::vec3(-14.799991, -3.200000, -27.800034));
@@ -318,15 +221,12 @@ int main()
 		pbrShader.setVec3("lights[3].position", glm::vec3(-5.200000, -2.200000, -19.200001));
 		pbrShader.setVec3("lights[3].color", glm::vec3(0.5f, 0.5f, 0.5f));
 
-		model = glm::mat4(1.0f);
-		model = glm::translate(model, lightPos);
-		model = glm::scale(model, glm::vec3(1.f));
+		for (GameObject gameObject : gameObjects)
+		{
+			gameObject.draw(pbrShader);
+		}
 
-		pbrShader.setMat4("model", model);
-
-		obj_model.Draw(pbrShader);
-
-#ifdef USE_SCENE_FILE
+		#ifdef USE_SCENE_FILE
 		for (int i = 0; i < sceneModels.size(); i++) {
 
 			//for every instance of this object
@@ -350,12 +250,12 @@ int main()
 				sceneModels.at(i).Draw(pbrShader);
 			}
 		}
-#endif
 
+		//that thing where the scene builds itself
 		if (percent < 1)
 			percent += .001;
+		#endif
 
-		glfwPollEvents(); // before we unbind the framebuffer with the depth
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glDisable(GL_DEPTH_TEST);
 
@@ -387,44 +287,36 @@ int main()
 		glBindTexture(GL_TEXTURE_2D, gAmbient);
 		glUniform1i(glGetUniformLocation(defShader.ID, "Ambient"), 4);
 		
+		defShader.setFloat("fader", fader);
 		defShader.setVec3("camPos", camera.Position);
 		renderQuad();
 
 		glBindVertexArray(0);
-
-		// draw skybox as last
-		/*glDepthFunc(GL_LEQUAL);  // change depth function so depth test passes when values are equal to depth buffer's content
-		hdriMapShader.use();
-
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, hdr_tex_id);
-		glUniform1i(glGetUniformLocation(hdriMapShader.ID, "equirectangularMap"), 1);
-
-		//view = glm::mat4(glm::mat3(camera.GetViewMatrix())); // remove translation from the view matrix
-		hdriMapShader.setMat4("view", view);
-		hdriMapShader.setMat4("projection", projection);
-		// skybox cube
-		glBindVertexArray(skyboxVAO);
-		glActiveTexture(GL_TEXTURE0);
-		glDrawArrays(GL_TRIANGLES, 0, 36);
-		glBindVertexArray(0);*/
-
-		glDepthFunc(GL_LESS); // set depth function back to default
-
-							  // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
-							  // -------------------------------------------------------------------------------
-
+		glDepthFunc(GL_LESS);
 		glfwSwapBuffers(window);
-		//glfwPollEvents();
+
+		pbrShader.use();
+		//now we do selection using one of the components of the albedo texture ---------------------------------------------------
+		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		//this needs to happen *before* polling events because we don't want to clear the albedo color
+		glDisable(GL_MULTISAMPLE);
+		pbrShader.setBool("isSelectionBuffer", true);
+		for (int i = 0; i < gameObjects.size(); i++) //would use for each, but need index
+		{
+			GameObject gameObject = gameObjects.at(i);
+			pbrShader.setVec3("selectionIndex", gameObject.stencilColor); //+1 required since 0 is for nothing
+			gameObject.draw(pbrShader); //wait why isn't this overwriting the albedo?
+		}
+		pbrShader.setBool("isSelectionBuffer", false);
+		glEnable(GL_MULTISAMPLE);
+
+		glfwPollEvents(); //polling events after the albedo texture functions as a stencil buffer
 	}
 
 	// optional: de-allocate all resources once they've outlived their purpose:
 	// ------------------------------------------------------------------------
-	glDeleteVertexArrays(1, &cubeVAO);
-	glDeleteVertexArrays(1, &skyboxVAO);
-	glDeleteBuffers(1, &VBO);
-	glDeleteBuffers(1, &skyboxVAO);
-
 	glfwTerminate();
 	return 0;
 }
@@ -477,9 +369,9 @@ void processInput(GLFWwindow* window)
 		lightPos.z -= step1;
 
 	if (glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS)
-		fader -= .1;
+		fader -= .5;
 	if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS)
-		fader += .1;
+		fader += .5;
 
 	//doing roughness change in shader
 	if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
@@ -504,9 +396,9 @@ void processInput(GLFWwindow* window)
 	}
 
 	if (glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS)
-		fader -= .01;
+		fader -= .5;
 	if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS)
-		fader += .01;
+		fader += .5;
 
 	// figure out what to change
 	bool shift = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) || glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT);
@@ -559,7 +451,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 	if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE)
 	{
 		int pixel_blockx, pixel_blocky;
-		float depth;
+		glm::vec4 color;
 		
 		pixel_blockx = 1;
 		pixel_blocky = 1;
@@ -568,23 +460,24 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 			SCR_HEIGHT - cursor_pos_y - 1,
 			pixel_blockx,
 			pixel_blocky,
-			GL_DEPTH_COMPONENT,
+			GL_RGBA,
 			GL_FLOAT,
-			&depth);
-		
+			&color);
 
-		glm::vec3 unprojected_coords = glm::unProject(
-			glm::vec3((float)cursor_pos_x, (float)cursor_pos_y, depth),
-			model,
-			projection,
-			glm::vec4(0, 0, SCR_WIDTH, SCR_HEIGHT)
-		);
+		printf("this is the color: (%f, %f, %f)\n", color.x, color.y, color.z);
 
-		printf("(%d, %d, %f) -> (%f, %f, %f)\n", cursor_pos_x, cursor_pos_y, depth,
-			unprojected_coords.x + camera.Position.x,
-			unprojected_coords.y + camera.Position.y,
-			unprojected_coords.z + camera.Position.z
-		);
+		for(GameObject & gameObject : gameObjects)
+		{
+			//might want a float equals ---  but that also might be a waste of time, since no calculations are done on the float (that I 'm aware of) so they shouldn't change
+			if (equals(gameObject.stencilColor.x, color.x)
+				&& equals(gameObject.stencilColor.y, color.y)
+				&& equals(gameObject.stencilColor.z, color.z)
+				)
+			{
+				printf("that's a hit!\n");
+				gameObject.isSelected = !gameObject.isSelected;
+			}
+		}
 	}
 	else if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS)
 	{
@@ -644,80 +537,6 @@ unsigned int loadTexture(char const* path)
 	return textureID;
 }
 
-unsigned load_environment_map(const char* path)
-{
-	stbi_set_flip_vertically_on_load(true);
-	int width, height, nr_components;
-	unsigned hdr_texture_id;
-
-	//load the hdri map
-	float* hdri_raw = stbi_loadf(path, &width, &height, &nr_components, 0);
-
-	//if loading didn't fail, create a texture for it
-	if (hdri_raw)
-	{
-		glGenTextures(1, &hdr_texture_id);
-		glBindTexture(GL_TEXTURE_2D, hdr_texture_id);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, width, height, 0, GL_RGB, GL_FLOAT, hdri_raw);
-
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-		//be a good citizen
-		stbi_image_free(hdri_raw);
-	}
-	else
-	{
-		cout << "HDRI map failed to load at path: " << path << endl;
-	}
-
-	//return the texture id
-	return hdr_texture_id;
-}
-
-// loads a cubemap texture from 6 individual texture faces
-// order:
-// +X (right)
-// -X (left)
-// +Y (top)
-// -Y (bottom)
-// +Z (front) 
-// -Z (back)
-// -------------------------------------------------------
-unsigned int loadCubemap(std::vector<std::string> faces)
-{
-	unsigned int textureID;
-	glGenTextures(1, &textureID);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
-
-	int width, height, nrComponents;
-	for (unsigned int i = 0; i < faces.size(); i++)
-	{
-		unsigned char* data = stbi_load(faces[i].c_str(), &width, &height, &nrComponents, 0);
-		if (data)
-		{
-			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-			stbi_image_free(data);
-		}
-		else
-		{
-			std::cout << "Cubemap texture failed to load at path: " << faces[i] << std::endl;
-			stbi_image_free(data);
-		}
-	}
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-
-	return textureID;
-}
-
-unsigned int quadVAO = 0;
-unsigned int quadVBO;
 void renderQuad()
 {
 	if (quadVAO == 0)
